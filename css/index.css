@@ -1,0 +1,336 @@
+/* ============================================================
+   index.css — Loteos SC (Info Panel UX + contrast)
+   Pegar en /css/index.css y linkear desde index.html
+   ============================================================ */
+
+:root{
+  /* Base */
+  --bg: #0b0f14;          /* fondo app (si usas oscuro) */
+  --surface: #ffffff;     /* panel info */
+  --surface-2: #f6f7fb;   /* filas zebra */
+  --text: #0f172a;        /* texto principal (alto contraste) */
+  --muted: #475569;       /* texto secundario */
+  --border: rgba(15, 23, 42, 0.12);
+
+  /* Acentos */
+  --accent: #2563eb;      /* azul accesible */
+  --accent-2: #0ea5e9;    /* cyan */
+  --danger: #dc2626;      /* rojo */
+  --ok: #16a34a;          /* verde */
+
+  /* Sombra */
+  --shadow: 0 14px 38px rgba(2, 6, 23, 0.18);
+  --shadow-soft: 0 10px 24px rgba(2, 6, 23, 0.12);
+
+  /* Tipografía */
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+
+/* Si tu sitio es claro, puedes ignorar esto.
+   Si tu app tiene fondo oscuro/satelital, esto ayuda a separar el panel */
+body{
+  color: var(--text);
+}
+
+/* ============================================================
+   Panel / Ventana de información
+   Soporta IDs y clases típicas (ajusta a tus nombres si difieren)
+   ============================================================ */
+#infoPanel,
+.info-panel,
+.panel-info,
+.sidebar-info{
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* Header del panel */
+#infoPanel .info-header,
+.info-panel .info-header,
+.panel-info .info-header,
+.sidebar-info .info-header{
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+/* Barra de acento a la izquierda */
+#infoPanel .info-header::before,
+.info-panel .info-header::before,
+.panel-info .info-header::before,
+.sidebar-info .info-header::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width: 6px;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+/* Títulos */
+#infoPanel h2, #infoPanel h3,
+.info-panel h2, .info-panel h3,
+.panel-info h2, .panel-info h3,
+.sidebar-info h2, .sidebar-info h3{
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+}
+
+#infoPanel .info-title,
+.info-panel .info-title{
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+#infoPanel .info-subtitle,
+.info-panel .info-subtitle{
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Cuerpo del panel */
+#infoPanel .info-body,
+.info-panel .info-body,
+.panel-info .info-body,
+.sidebar-info .info-body{
+  padding: 14px 16px 16px;
+}
+
+/* ============================================================
+   Tabla de atributos (alto contraste + zebra + hover)
+   ============================================================ */
+#infoPanel table,
+.info-panel table,
+.panel-info table,
+.sidebar-info table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+#infoPanel th, #infoPanel td,
+.info-panel th, .info-panel td,
+.panel-info th, .panel-info td,
+.sidebar-info th, .sidebar-info td{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  font-size: 13.5px;
+}
+
+#infoPanel th,
+.info-panel th,
+.panel-info th,
+.sidebar-info th{
+  text-align: left;
+  width: 42%;
+  color: #111827;
+  font-weight: 700;
+  background: #fbfcff;
+}
+
+#infoPanel td,
+.info-panel td,
+.panel-info td,
+.sidebar-info td{
+  color: var(--text);
+  font-weight: 600;
+}
+
+#infoPanel tr:nth-child(even) td,
+#infoPanel tr:nth-child(even) th,
+.info-panel tr:nth-child(even) td,
+.info-panel tr:nth-child(even) th{
+  background: var(--surface-2);
+}
+
+#infoPanel tr:hover td,
+#infoPanel tr:hover th,
+.info-panel tr:hover td,
+.info-panel tr:hover th{
+  background: #eef2ff; /* suave pero evidente */
+}
+
+#infoPanel tr:last-child td,
+#infoPanel tr:last-child th,
+.info-panel tr:last-child td,
+.info-panel tr:last-child th{
+  border-bottom: none;
+}
+
+/* ============================================================
+   Links y botones (visibles sobre fondo claro)
+   ============================================================ */
+#infoPanel a,
+.info-panel a,
+.panel-info a,
+.sidebar-info a{
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+  outline: none;
+}
+
+#infoPanel a:hover,
+.info-panel a:hover{
+  text-decoration: underline;
+}
+
+.btn,
+#infoPanel .btn,
+.info-panel .btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37,99,235,0.25);
+  background: rgba(37,99,235,0.10);
+  color: #0b2a7a;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn:hover{
+  background: rgba(37,99,235,0.16);
+}
+
+.btn-primary{
+  border-color: rgba(37,99,235,0.35);
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover{
+  filter: brightness(0.95);
+}
+
+/* ============================================================
+   Badges (estado/leyenda)
+   ============================================================ */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.badge--venta{
+  background: rgba(22,163,74,0.12);
+  border-color: rgba(22,163,74,0.30);
+  color: #065f2a;
+}
+
+.badge--vendido{
+  background: rgba(220,38,38,0.12);
+  border-color: rgba(220,38,38,0.30);
+  color: #7f1d1d;
+}
+
+.badge--reservado{
+  background: rgba(234,179,8,0.16);
+  border-color: rgba(234,179,8,0.35);
+  color: #7a5b00;
+}
+
+/* ============================================================
+   Leaflet popup (si la info sale en popup)
+   ============================================================ */
+.leaflet-popup-content-wrapper{
+  border-radius: 14px !important;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.leaflet-popup-content{
+  margin: 12px 12px;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.leaflet-popup-content h3{
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.leaflet-popup-content p{
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.leaflet-container a{
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ============================================================
+   Pequeños detalles UX
+   ============================================================ */
+hr{
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.kpi-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kpi{
+  flex: 1 1 auto;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.kpi .kpi-label{
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kpi .kpi-value{
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+  margin-top: 2px;
+}
+
+/* Responsive: panel más usable en móvil */
+@media (max-width: 720px){
+  #infoPanel th, #infoPanel td,
+  .info-panel th, .info-panel td{
+    font-size: 13px;
+    padding: 9px 10px;
+  }
+  #infoPanel .info-title,
+  .info-panel .info-title{
+    font-size: 16.5px;
+  }
+}
+
