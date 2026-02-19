@@ -1,707 +1,524 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Loteo del Valle — Lotes en Venta</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Loteo del Valle — Lotes en Venta</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-</script>
+  <!-- Tipografías opcionales (si ya las usas) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-<style>
-:root {
-  --sand:    #F2EAD8;
-  --sand2:   #D9CCAE;
-  --terrac:  #B85C38;
-  --terrac2: #8C3E1E;
-  --ink:     #181410;
-  --ink2:    #252018;
-  --muted:   #7A6E5A;
-  --muted2:  #574F40;
-  --glass:   rgba(18,14,10,0.78);
-  --glass2:  rgba(18,14,10,0.92);
-  --border:  rgba(242,234,216,0.12);
-  --border2: rgba(242,234,216,0.22);
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  --c25: #5E9ED6;
-  --c30: #2DA882;
-  --c40: #D4882A;
-}
+  <!-- ✅ Nuevo CSS de contraste (crear en /css/index.css) -->
+  <link rel="stylesheet" href="css/index.css"/>
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; background: #0a0806; }
-#map {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  height: 100%;
-  width: 100%;
-}
+  <style>
+    /* Layout base (por si tu CSS global no lo define) */
+    :root{
+      --ui-gap: 14px;
+      --topbar-h: 56px;
+    }
+    html, body { height:100%; margin:0; }
+    body{
+      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b0f14;
+    }
 
-/* ── HEADER ────────────────────────────────── */
-#header {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  z-index: 1200;
-  height: 58px;
-  display: flex;
-  align-items: stretch;
-  background: var(--glass2);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  animation: fadeDown 0.5s ease both;
-}
+    .app{
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: var(--ui-gap);
+      padding: var(--ui-gap);
+      box-sizing: border-box;
+    }
 
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+    .mapWrap{
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 18px 44px rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.10);
+      min-height: 520px;
+    }
 
-#brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 0 20px;
-  border-right: 1px solid var(--border);
-  flex-shrink: 0;
-}
+    #map{ height: 100%; width: 100%; }
 
-#brand-icon {
-  width: 32px; height: 32px;
-  background: var(--terrac);
-  border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px;
-}
+    /* Top controls */
+    .floatingControls{
+      position:absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      pointer-events: none; /* para no bloquear mapa salvo en botones */
+    }
 
-#brand-text h1 {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--sand);
-  letter-spacing: 0.03em;
-  line-height: 1.1;
-}
-#brand-text p {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 9.5px;
-  font-weight: 300;
-  color: var(--muted);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
+    .chip{
+      pointer-events: auto;
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(15,23,42,.12);
+      border-radius: 999px;
+      padding: 8px 10px;
+      display:flex;
+      gap: 8px;
+      align-items:center;
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+      backdrop-filter: blur(6px);
+    }
+    .chip b{ font-weight: 900; font-size: 12px; color:#0f172a; }
 
-#header-mid {
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  gap: 6px;
-  flex: 1;
-}
+    .toggleBtn{
+      pointer-events:auto;
+      border: 1px solid rgba(15,23,42,.14);
+      background: rgba(255,255,255,.92);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      color:#0f172a;
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+    }
+    .toggleBtn:hover{ filter: brightness(0.98); }
 
-#lot-count {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
-  font-weight: 300;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
-#lot-count strong {
-  color: var(--sand2);
-  font-weight: 500;
-}
+    /* Legend */
+    .legend{
+      pointer-events: auto;
+      position:absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 1000;
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(15,23,42,.12);
+      border-radius: 14px;
+      padding: 10px 12px;
+      box-shadow: 0 12px 26px rgba(0,0,0,.18);
+      min-width: 210px;
+    }
+    .legend .title{
+      font-weight: 900;
+      font-size: 12px;
+      color:#0f172a;
+      margin-bottom: 8px;
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items:center;
+    }
+    .legend .row{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 12.5px;
+      color:#0f172a;
+      font-weight: 800;
+    }
+    .swatch{
+      width: 18px; height: 12px;
+      border-radius: 4px;
+      border: 1px solid rgba(15,23,42,.18);
+      flex: 0 0 auto;
+    }
+    .swatch.vendidos{ border:2px solid #dc2626; background: rgba(220,38,38,.10); }
+    .swatch.venta25{ background: rgba(37,99,235,.12); }
+    .swatch.venta30{ background: rgba(14,165,233,.14); }
+    .swatch.venta40{ background: rgba(22,163,74,.14); }
+    .legend .note{
+      margin-top: 6px;
+      font-size: 11.5px;
+      color:#475569;
+      font-weight: 700;
+    }
 
-#header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  border-left: 1px solid var(--border);
-}
+    /* Info panel wrapper (usa tu index.css para contraste) */
+    .side{
+      display: flex;
+      flex-direction: column;
+      gap: var(--ui-gap);
+      min-width: 320px;
+    }
 
-.hbtn {
-  display: flex; align-items: center; gap: 5px;
-  padding: 6px 12px;
-  border-radius: 5px;
-  border: 1px solid var(--border2);
-  background: transparent;
-  color: var(--sand2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
-  font-weight: 400;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.hbtn:hover { background: rgba(242,234,216,0.07); border-color: var(--sand2); }
-.hbtn.active {
-  background: rgba(184,92,56,0.22);
-  border-color: var(--terrac);
-  color: #FFCAAC;
-}
-.hbtn svg { width: 12px; height: 12px; opacity: 0.75; }
+    .infoEmpty{
+      padding: 14px 16px;
+      color: #475569;
+      font-weight: 700;
+      font-size: 13px;
+    }
 
-/* ── LEGEND ────────────────────────────────── */
-#legend {
-  position: absolute;
-  bottom: 24px; left: 14px;
-  z-index: 1100;
-  background: var(--glass2);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 13px 15px;
-  animation: fadeUp 0.6s 0.2s ease both;
-}
+    /* Responsive */
+    @media (max-width: 980px){
+      .app{
+        grid-template-columns: 1fr;
+      }
+      .side{
+        order: 2;
+      }
+      .mapWrap{
+        min-height: 520px;
+      }
+    }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+    /* Toast */
+    #toast{
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 2000;
+      background: rgba(15,23,42,.95);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 800;
+      box-shadow: 0 18px 44px rgba(0,0,0,.35);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: .18s ease;
+      pointer-events:none;
+      max-width: 340px;
+    }
+    #toast.show{
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 
-#legend h4 {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--muted);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 9px;
-}
-
-.leg-row {
-  display: flex; align-items: center; gap: 8px;
-  margin-bottom: 7px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 300;
-  color: var(--sand);
-}
-.leg-row:last-child { margin-bottom: 0; }
-
-.leg-dot {
-  width: 12px; height: 12px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-.leg-dot.vendido {
-  background: transparent;
-  border: 2px solid rgba(255,80,80,0.7);
-}
-
-/* ── PANEL ─────────────────────────────────── */
-#panel {
-  position: absolute;
-  top: 70px; right: 14px;
-  width: 290px; max-width: calc(100vw - 28px);
-  z-index: 1100;
-  background: var(--glass2);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  display: none;
-}
-#panel.open {
-  display: block;
-  animation: panelIn 0.22s ease both;
-}
-@keyframes panelIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-#panel-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 15px 16px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-#panel-name {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--sand);
-  letter-spacing: 0.01em;
-  line-height: 1.1;
-}
-#panel-id {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 300;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-
-#panel-close {
-  width: 26px; height: 26px;
-  border-radius: 6px;
-  border: 1px solid var(--border2);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px;
-  line-height: 1;
-  transition: all 0.15s;
-  flex-shrink: 0;
-  margin-top: 1px;
-  font-family: sans-serif;
-}
-#panel-close:hover { background: rgba(242,234,216,0.08); color: var(--sand); }
-
-#panel-price-block {
-  margin: 14px 16px 0;
-  padding: 10px 13px;
-  border-radius: 8px;
-  background: rgba(242,234,216,0.05);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-#panel-price-label {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 10px;
-  font-weight: 300;
-  color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-#panel-price-value {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--sand);
-  line-height: 1;
-}
-#panel-price-cur {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 300;
-  color: var(--muted);
-}
-
-#panel-rows {
-  padding: 6px 16px 0;
-}
-.p-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(242,234,216,0.06);
-}
-.p-row:last-child { border-bottom: none; }
-.p-label {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 300;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-}
-.p-value {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--sand);
-}
-
-#panel-cta {
-  margin: 14px 16px 16px;
-  display: flex;
-  gap: 7px;
-}
-
-.cta-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 8px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-decoration: none;
-  transition: all 0.15s;
-}
-.cta-primary {
-  background: var(--terrac);
-  color: #fff;
-}
-.cta-primary:hover { background: #C96540; }
-.cta-secondary {
-  background: rgba(242,234,216,0.07);
-  border: 1px solid var(--border2) !important;
-  color: var(--sand2);
-}
-.cta-secondary:hover { background: rgba(242,234,216,0.12); }
-.cta-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-
-/* ── ZOOM controls override ─────────────────── */
-.leaflet-control-zoom {
-  border: 1px solid var(--border) !important;
-  border-radius: 8px !important;
-  overflow: hidden;
-  box-shadow: none !important;
-}
-.leaflet-control-zoom a {
-  background: var(--glass2) !important;
-  color: var(--sand2) !important;
-  border: none !important;
-  width: 30px !important; height: 30px !important;
-  line-height: 30px !important;
-  font-size: 16px !important;
-  transition: background 0.15s !important;
-}
-.leaflet-control-zoom a:hover { background: rgba(242,234,216,0.12) !important; }
-.leaflet-control-zoom-in { border-bottom: 1px solid var(--border) !important; }
-.leaflet-bar a:first-child { border-radius: 0 !important; }
-.leaflet-bar a:last-child { border-radius: 0 !important; }
-
-/* ── Selected lote highlight ────────────────── */
-.lote-selected { filter: brightness(1.35); }
-
-/* ── Mobile tweaks ──────────────────────────── */
-@media (max-width: 600px) {
-  #brand-text p { display: none; }
-  #lot-count { display: none; }
-  #header-actions { padding: 0 10px; gap: 4px; }
-  .hbtn span { display: none; }
-  .hbtn { padding: 6px 9px; }
-
-  #panel {
-    top: auto; bottom: 14px;
-    right: 10px; left: 10px;
-    width: auto;
-  }
-}
-
-/* ── Toast ── */
-#toast {
-  position: absolute;
-  bottom: 70px; left: 50%; transform: translateX(-50%);
-  z-index: 1300;
-  background: var(--glass2);
-  border: 1px solid var(--border2);
-  color: var(--sand2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 300;
-  padding: 8px 16px;
-  border-radius: 20px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s;
-  pointer-events: none;
-}
-#toast.show { opacity: 1; }
-</style>
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2600);
+    }
+  </script>
 </head>
 
 <body>
-<div id="map"></div>
+  <div id="toast"></div>
 
-<!-- HEADER -->
-<div id="header">
-  <div id="brand">
-    <div id="brand-icon">⛰</div>
-    <div id="brand-text">
-      <h1>Loteo del Valle</h1>
-      <p>Atacama · Chile</p>
+  <div class="app">
+    <div class="mapWrap">
+      <div class="floatingControls">
+        <button id="basemapToggle" class="toggleBtn" title="Cambiar base">SAT / OSM</button>
+        <div class="chip" title="Haz clic en un polígono para ver sus datos">
+          <b>Tip:</b> clic en un lote para centrar y ver ficha
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+      <div class="legend" id="legend">
+        <div class="title">
+          <span>Leyenda</span>
+          <span style="font-weight:800;color:#475569;font-size:11.5px">zoom máx 16</span>
+        </div>
+        <div class="row"><span class="swatch vendidos"></span> Vendidos (borde rojo)</div>
+        <div class="row"><span class="swatch venta25"></span> En venta — MM$ 25</div>
+        <div class="row"><span class="swatch venta30"></span> En venta — MM$ 30</div>
+        <div class="row"><span class="swatch venta40"></span> En venta — MM$ 40</div>
+        <div class="note">* Los lotes en venta se muestran con achurado sólido.</div>
+      </div>
+    </div>
+
+    <!-- ✅ Panel info: se apoya en css/index.css (alto contraste) -->
+    <div class="side">
+      <aside id="infoPanel" class="info-panel">
+        <div class="info-header">
+          <div class="info-title">Información del lote</div>
+          <div class="info-subtitle">Haz clic en un polígono del mapa</div>
+        </div>
+        <div class="info-body" id="infoBody">
+          <div class="infoEmpty">
+            Selecciona un lote para ver su tabla de datos y centrar el mapa.
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
-  <div id="header-mid">
-    <span id="lot-count"><strong id="countNum">12</strong> lotes disponibles</span>
-  </div>
-  <div id="header-actions">
-    <button class="hbtn active" id="btnFit" title="Ajustar vista">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/>
-      </svg>
-      <span>Vista</span>
-    </button>
-    <button class="hbtn" id="btnToggle" title="Cambiar mapa base">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="8" cy="8" r="6.5"/>
-        <path d="M8 1.5C8 1.5 11 5 11 8s-3 6.5-3 6.5"/>
-        <path d="M8 1.5C8 1.5 5 5 5 8s3 6.5 3 6.5"/>
-        <path d="M1.5 8h13"/>
-      </svg>
-      <span id="toggleLabel">OSM</span>
-    </button>
-  </div>
-</div>
 
-<!-- LEGEND -->
-<div id="legend">
-  <h4>Referencias</h4>
-  <div class="leg-row">
-    <div class="leg-dot" style="background:var(--c25)"></div>
-    <span>En venta — MM$ 25</span>
-  </div>
-  <div class="leg-row">
-    <div class="leg-dot" style="background:var(--c30)"></div>
-    <span>En venta — MM$ 30</span>
-  </div>
-  <div class="leg-row">
-    <div class="leg-dot" style="background:var(--c40)"></div>
-    <span>En venta — MM$ 40</span>
-  </div>
-  <div class="leg-row">
-    <div class="leg-dot vendido"></div>
-    <span>Loteo base</span>
-  </div>
-</div>
+  <script>
+    // ============================================================
+    // 1) Base maps (SAT/OSM) + prefer SVG para poder achurar (pattern)
+    // ============================================================
+    const map = L.map("map", {
+      zoomControl: true,
+      preferCanvas: false, // ✅ necesario para manipular SVG paths (hachurado)
+    });
 
-<!-- INFO PANEL -->
-<div id="panel">
-  <div id="panel-top">
-    <div>
-      <div id="panel-name">—</div>
-      <div id="panel-id"></div>
-    </div>
-    <button id="panel-close">×</button>
-  </div>
-  <div id="panel-price-block">
-    <div id="panel-price-label">Valor</div>
-    <div id="panel-price-value">—</div>
-    <div id="panel-price-cur">MM CLP</div>
-  </div>
-  <div id="panel-rows"></div>
-  <div id="panel-cta">
-    <a class="cta-btn cta-primary" id="btn-wa" href="#" target="_blank">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.555 4.126 1.527 5.857L0 24l6.335-1.652A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.001-1.37l-.36-.213-3.762.982.999-3.648-.235-.374A9.785 9.785 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
-      </svg>
-      Consultar
-    </a>
-    <button class="cta-btn cta-secondary" id="btn-zoom">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="6.5" cy="6.5" r="5"/>
-        <path d="M10.5 10.5l3.5 3.5"/>
-        <path d="M6.5 4v5M4 6.5h5"/>
-      </svg>
-      Zoom
-    </button>
-  </div>
-</div>
+    const SAT = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 16, attribution: "Esri" }
+    );
 
-<script>
-/* ── GeoJSON data ── */
-const LOTES = {"type": "FeatureCollection", "name": "lotes_en_venta", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}}, "features": [{"type": "Feature", "properties": {"id": "loteo_02.5", "Name": "Lote 16I", "Valor": "MM$ 40"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52161584242097, -27.326792353683146, 0.0], [-70.52109446342098, -27.326806357683147, 0.0], [-70.52114172642098, -27.327706350683147, 0.0], [-70.52163208742107, -27.327695757683248, 0.0], [-70.52161584242097, -27.326792353683146, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.10", "Name": "Lote 21I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.51966037542107, -27.327446139683147, 0.0], [-70.51930372042098, -27.327121472683146, 0.0], [-70.51862709542107, -27.327219474683147, 0.0], [-70.51866029642098, -27.327309946683247, 0.0], [-70.51873374642098, -27.327449512683145, 0.0], [-70.51882531442098, -27.327554963683145, 0.0], [-70.51899569742098, -27.327720145683145, 0.0], [-70.51911900042097, -27.327810075683146, 0.0], [-70.51925280642098, -27.327897513683148, 0.0], [-70.51966037542107, -27.327446139683147, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.11", "Name": "Lote 22I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.51933671142108, -27.326562208683146, 0.0], [-70.51852211042097, -27.326586541683145, 0.0], [-70.51852281342097, -27.326729051683145, 0.0], [-70.51854531542098, -27.326864442683146, 0.0], [-70.51856855642107, -27.326994105683145, 0.0], [-70.51859901142097, -27.327127950683145, 0.0], [-70.51862732842098, -27.327219332683146, 0.0], [-70.51930372042098, -27.327121472683146, 0.0], [-70.51933671142108, -27.326562208683146, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.12", "Name": "Lote 23I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.51936792942098, -27.326030953683148, 0.0], [-70.51846048742098, -27.326058180683248, 0.0], [-70.51852211042097, -27.326586541683145, 0.0], [-70.51933671142108, -27.326562208683146, 0.0], [-70.51936792942098, -27.326030953683148, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.13", "Name": "Lote 24I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.51939598542097, -27.325558985683145, 0.0], [-70.51835057642097, -27.325580300683246, 0.0], [-70.51839488042097, -27.325677282683145, 0.0], [-70.51842954542097, -27.325802967683146, 0.0], [-70.51846043442097, -27.326058141683145, 0.0], [-70.51936792942098, -27.326030953683148, 0.0], [-70.51939598542097, -27.325558985683145, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.14", "Name": "Lote 25I", "Valor": "MM$ 30"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.51940828842098, -27.325350124683247, 0.0], [-70.51894965042098, -27.324790935683147, 0.0], [-70.51835057642097, -27.325580300683246, 0.0], [-70.51939598542097, -27.325558985683145, 0.0], [-70.51940828842098, -27.325350124683247, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.17", "Name": "Lote 28I", "Valor": "MM$ 40"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52099435242107, -27.326259813683148, 0.0], [-70.52013374642108, -27.326331143683145, 0.0], [-70.52025260842098, -27.326684736683145, 0.0], [-70.52033578042098, -27.326914347683147, 0.0], [-70.52102477042098, -27.326831661683148, 0.0], [-70.52099435242107, -27.326259813683148, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.18", "Name": "Lote 29I", "Valor": "MM$ 40"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52102477042098, -27.326831661683148, 0.0], [-70.52033578042098, -27.326914347683147, 0.0], [-70.52035762142097, -27.326977701683145, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52106561342097, -27.327642159683148, 0.0], [-70.52102477042098, -27.326831661683148, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.19", "Name": "Lote 30I", "Valor": "MM$ 30"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52106561342097, -27.327642159683148, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52031356442097, -27.327946415683147, 0.0], [-70.52098868142097, -27.328560792683145, 0.0], [-70.52099873642098, -27.328569747683247, 0.0], [-70.52101564242098, -27.328576373683145, 0.0], [-70.52102671142097, -27.328580239683248, 0.0], [-70.52104331542097, -27.328583352683147, 0.0], [-70.52106024042098, -27.328581922683146, 0.0], [-70.52107343142097, -27.328577420683146, 0.0], [-70.52108942142108, -27.328567675683146, 0.0], [-70.52110254642098, -27.328554012683146, 0.0], [-70.52111068742097, -27.328540972683147, 0.0], [-70.52111375342098, -27.328525229683155, 0.0], [-70.52111304842097, -27.328511802683146, 0.0], [-70.52106561342097, -27.327642159683148, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.20", "Name": "Lote 31I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52035762142097, -27.326977701683145, 0.0], [-70.51967393242097, -27.327366963683147, 0.0], [-70.52031356442097, -27.327946415683147, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52035762142097, -27.326977701683145, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.21", "Name": "Lote 32I", "Valor": "MM$ 25"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52025260842098, -27.326684736683145, 0.0], [-70.51939782242097, -27.326729318683146, 0.0], [-70.51937604542107, -27.327097100683147, 0.0], [-70.51967393242097, -27.327366963683147, 0.0], [-70.52035762142097, -27.326977701683145, 0.0], [-70.52025260842098, -27.326684736683145, 0.0]]]}}, {"type": "Feature", "properties": {"id": "loteo_02.22", "Name": "Lote 33I", "Valor": "MM$ 30"}, "geometry": {"type": "Polygon", "coordinates": [[[-70.52005514042098, -27.326089484683248, 0.0], [-70.51943560442098, -27.326087722683145, 0.0], [-70.51939782242097, -27.326729318683146, 0.0], [-70.52025260842098, -27.326684736683145, 0.0], [-70.52005514042098, -27.326089484683248, 0.0]]]}}]};
+    const OSM = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "© OpenStreetMap" }
+    );
 
-const BASE = {"type": "FeatureCollection", "name": "loteo_base", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}}, "features": [{"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52445433617412, -27.318817644288156, 0.0], [-70.52381075937411, -27.318643967888157, 0.0], [-70.52341043907411, -27.319169124488155, 0.0], [-70.52394062687411, -27.319491554788154, 0.0], [-70.52445433617412, -27.318817644288156, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52393881097412, -27.319490327488158, 0.0], [-70.52340841437412, -27.319167770188155, 0.0], [-70.5229493360741, -27.319770000788157, 0.0], [-70.5234730614741, -27.320088501688147, 0.0], [-70.52393881097412, -27.319490327488158, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.5234730614741, -27.320088501688147, 0.0], [-70.52294266327411, -27.319765942788155, 0.0], [-70.52248642367411, -27.320364441688156, 0.0], [-70.52302581937411, -27.320692473088155, 0.0], [-70.5234730614741, -27.320088501688147, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52302581937411, -27.320692473088155, 0.0], [-70.52247979217411, -27.320360408788154, 0.0], [-70.52202812277412, -27.320940481288154, 0.0], [-70.52257955917412, -27.321273623488157, 0.0], [-70.52302581937411, -27.320692473088155, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52257955917412, -27.321273623488157, 0.0], [-70.52202812277412, -27.320940481288154, 0.0], [-70.52158407857411, -27.321510753588157, 0.0], [-70.52213828647412, -27.321847794188155, 0.0], [-70.52257955917412, -27.321273623488157, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52213828647412, -27.321847794188155, 0.0], [-70.52158407857411, -27.321510753588157, 0.0], [-70.52113683377411, -27.322085129288155, 0.0], [-70.52168150587411, -27.322416371388154, 0.0], [-70.52213828647412, -27.321847794188155, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52168150587411, -27.322416371388154, 0.0], [-70.52113683377411, -27.322085129288155, 0.0], [-70.52067012157411, -27.322684498488155, 0.0], [-70.5211779342741, -27.322993325388158, 0.0], [-70.52168150587411, -27.322416371388154, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.5211779342741, -27.322993325388158, 0.0], [-70.52067012157411, -27.322684498488155, 0.0], [-70.52018009837411, -27.323313796088147, 0.0], [-70.52068069097412, -27.323618232688155, 0.0], [-70.52105014447412, -27.323122265288156, 0.0], [-70.5211779342741, -27.322993325388158, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52068069097412, -27.323618232688155, 0.0], [-70.52018009837411, -27.323313796088147, 0.0], [-70.51969688607412, -27.323936882188157, 0.0], [-70.52021059627411, -27.324249296888155, 0.0], [-70.52068069097412, -27.323618232688155, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52021111967412, -27.324249615188155, 0.0], [-70.51969507667411, -27.323935781788155, 0.0], [-70.51920057917411, -27.324577621488157, 0.0], [-70.5197937559741, -27.324808864288155, 0.0], [-70.52021111967412, -27.324249615188155, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51919786642097, -27.324579982683147, 0.0], [-70.51903450742097, -27.324787484683146, 0.0], [-70.51941417342097, -27.325250387683145, 0.0], [-70.51983551542098, -27.325403054683147, 0.0], [-70.52009010542098, -27.324928236683146, 0.0], [-70.51919786642097, -27.324579982683147, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52009010542098, -27.324928236683146, 0.0], [-70.51983657742097, -27.325402511683148, 0.0], [-70.52065256942097, -27.325699797683146, 0.0], [-70.52090010742107, -27.325237396683146, 0.0], [-70.52009010542098, -27.324928236683146, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52090010742107, -27.325237396683146, 0.0], [-70.52065256942097, -27.325699797683146, 0.0], [-70.52104444042098, -27.325843084683147, 0.0], [-70.52160721942097, -27.326060797683148, 0.0], [-70.52160034142098, -27.325504246683145, 0.0], [-70.52090010742107, -27.325237396683146, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52160721942097, -27.326060797683148, 0.0], [-70.52104444042098, -27.325843084683147, 0.0], [-70.52109428342098, -27.326805169683148, 0.0], [-70.52161584242097, -27.326792353683146, 0.0], [-70.52160721942097, -27.326060797683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52161584242097, -27.326792353683146, 0.0], [-70.52109446342098, -27.326806357683147, 0.0], [-70.52114172642098, -27.327706350683147, 0.0], [-70.52163208742107, -27.327695757683248, 0.0], [-70.52161584242097, -27.326792353683146, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52163208742107, -27.327695757683248, 0.0], [-70.52114172642098, -27.327706350683147, 0.0], [-70.52118400442097, -27.328514410683145, 0.0], [-70.52118531842108, -27.328528625683145, 0.0], [-70.52117971542097, -27.328555224683146, 0.0], [-70.52117360442098, -27.328569928683144, 0.0], [-70.52116105342097, -27.328590030683145, 0.0], [-70.52160231842097, -27.328762943683145, 0.0], [-70.52164200742098, -27.328245928683145, 0.0], [-70.52163208742107, -27.327695757683248, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52160231842097, -27.328762943683145, 0.0], [-70.52116135542097, -27.328589820683145, 0.0], [-70.52114862442097, -27.328603074683148, 0.0], [-70.52114150142097, -27.328610489683147, 0.0], [-70.52113103742097, -27.328618504683245, 0.0], [-70.52112105442097, -27.328625994683147, 0.0], [-70.52110380242097, -27.328633972683146, 0.0], [-70.52108993842097, -27.328639550683146, 0.0], [-70.52107672542107, -27.328643310683248, 0.0], [-70.52106431642098, -27.328643906683148, 0.0], [-70.52105275142097, -27.328644826683146, 0.0], [-70.52103665142097, -27.328644869683146, 0.0], [-70.52102002342097, -27.328643183683138, 0.0], [-70.52100868642097, -27.328641436683146, 0.0], [-70.52086685342097, -27.329035906683146, 0.0], [-70.52111183242097, -27.329204902683145, 0.0], [-70.52129637242098, -27.329405735683146, 0.0], [-70.52153531442097, -27.329707397683148, 0.0], [-70.52160231842097, -27.328762943683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52100833342108, -27.328640973683147, 0.0], [-70.52096809642097, -27.328625172683147, 0.0], [-70.52093198642098, -27.328599242683147, 0.0], [-70.52034083242107, -27.328062924683145, 0.0], [-70.51997198342097, -27.328391517683148, 0.0], [-70.52008924242098, -27.328518713683145, 0.0], [-70.52037661042097, -27.328727660683146, 0.0], [-70.52056222542107, -27.328847917683245, 0.0], [-70.52086685342097, -27.329035906683146, 0.0], [-70.52100833342108, -27.328640973683147, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52034083242107, -27.328062924683145, 0.0], [-70.51966037542107, -27.327446139683147, 0.0], [-70.51925200542098, -27.327898285683148, 0.0], [-70.51938723542098, -27.327956425683155, 0.0], [-70.51951807242098, -27.328020917683148, 0.0], [-70.51963609542098, -27.328086981683146, 0.0], [-70.51973361442097, -27.328167215683145, 0.0], [-70.51983748042097, -27.328253972683147, 0.0], [-70.51997198342097, -27.328391517683148, 0.0], [-70.52034083242107, -27.328062924683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51966037542107, -27.327446139683147, 0.0], [-70.51930372042098, -27.327121472683146, 0.0], [-70.51862709542107, -27.327219474683147, 0.0], [-70.51866029642098, -27.327309946683247, 0.0], [-70.51873374642098, -27.327449512683145, 0.0], [-70.51882531442098, -27.327554963683145, 0.0], [-70.51899569742098, -27.327720145683145, 0.0], [-70.51911900042097, -27.327810075683146, 0.0], [-70.51925280642098, -27.327897513683148, 0.0], [-70.51966037542107, -27.327446139683147, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51933671142108, -27.326562208683146, 0.0], [-70.51852211042097, -27.326586541683145, 0.0], [-70.51852281342097, -27.326729051683145, 0.0], [-70.51854531542098, -27.326864442683146, 0.0], [-70.51856855642107, -27.326994105683145, 0.0], [-70.51859901142097, -27.327127950683145, 0.0], [-70.51862732842098, -27.327219332683146, 0.0], [-70.51930372042098, -27.327121472683146, 0.0], [-70.51933671142108, -27.326562208683146, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51936792942098, -27.326030953683148, 0.0], [-70.51846048742098, -27.326058180683248, 0.0], [-70.51852211042097, -27.326586541683145, 0.0], [-70.51933671142108, -27.326562208683146, 0.0], [-70.51936792942098, -27.326030953683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51939598542097, -27.325558985683145, 0.0], [-70.51835057642097, -27.325580300683246, 0.0], [-70.51839488042097, -27.325677282683145, 0.0], [-70.51842954542097, -27.325802967683146, 0.0], [-70.51846043442097, -27.326058141683145, 0.0], [-70.51936792942098, -27.326030953683148, 0.0], [-70.51939598542097, -27.325558985683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.51940828842098, -27.325350124683247, 0.0], [-70.51894965042098, -27.324790935683147, 0.0], [-70.51835057642097, -27.325580300683246, 0.0], [-70.51939598542097, -27.325558985683145, 0.0], [-70.51940828842098, -27.325350124683247, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52031840742097, -27.325646838683145, 0.0], [-70.51947958542108, -27.325342327683146, 0.0], [-70.51943565342097, -27.326087723683145, 0.0], [-70.52005514042098, -27.326089484683248, 0.0], [-70.52031840742097, -27.325646838683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52097517642098, -27.325885176683148, 0.0], [-70.52031840742097, -27.325646838683145, 0.0], [-70.52005514042098, -27.326089484683248, 0.0], [-70.52013289842107, -27.326331533683145, 0.0], [-70.52099483842098, -27.326259771683148, 0.0], [-70.52097517642098, -27.325885176683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52099435242107, -27.326259813683148, 0.0], [-70.52013374642108, -27.326331143683145, 0.0], [-70.52025260842098, -27.326684736683145, 0.0], [-70.52033578042098, -27.326914347683147, 0.0], [-70.52102477042098, -27.326831661683148, 0.0], [-70.52099435242107, -27.326259813683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52102477042098, -27.326831661683148, 0.0], [-70.52033578042098, -27.326914347683147, 0.0], [-70.52035762142097, -27.326977701683145, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52106561342097, -27.327642159683148, 0.0], [-70.52102477042098, -27.326831661683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52106561342097, -27.327642159683148, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52031356442097, -27.327946415683147, 0.0], [-70.52098868142097, -27.328560792683145, 0.0], [-70.52099873642098, -27.328569747683247, 0.0], [-70.52101564242098, -27.328576373683145, 0.0], [-70.52102671142097, -27.328580239683248, 0.0], [-70.52104331542097, -27.328583352683147, 0.0], [-70.52106024042098, -27.328581922683146, 0.0], [-70.52107343142097, -27.328577420683146, 0.0], [-70.52108942142108, -27.328567675683146, 0.0], [-70.52110254642098, -27.328554012683146, 0.0], [-70.52111068742097, -27.328540972683147, 0.0], [-70.52111375342098, -27.328525229683155, 0.0], [-70.52111304842097, -27.328511802683146, 0.0], [-70.52106561342097, -27.327642159683148, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52035762142097, -27.326977701683145, 0.0], [-70.51967393242097, -27.327366963683147, 0.0], [-70.52031356442097, -27.327946415683147, 0.0], [-70.52060307142098, -27.327662558683148, 0.0], [-70.52035762142097, -27.326977701683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52025260842098, -27.326684736683145, 0.0], [-70.51939782242097, -27.326729318683146, 0.0], [-70.51937604542107, -27.327097100683147, 0.0], [-70.51967393242097, -27.327366963683147, 0.0], [-70.52035762142097, -27.326977701683145, 0.0], [-70.52025260842098, -27.326684736683145, 0.0]]]]}}, {"type": "Feature", "properties": {}, "geometry": {"type": "MultiPolygon", "coordinates": [[[[-70.52005514042098, -27.326089484683248, 0.0], [-70.51943560442098, -27.326087722683145, 0.0], [-70.51939782242097, -27.326729318683146, 0.0], [-70.52025260842098, -27.326684736683145, 0.0], [-70.52005514042098, -27.326089484683248, 0.0]]]]}}]};
+    let basemapMode = localStorage.getItem("loteo_basemap") || "SAT";
+    (basemapMode === "OSM" ? OSM : SAT).addTo(map);
 
-/* ── Map init (v4 proven pattern: tiles added immediately, no setView needed) ── */
-const map = L.map("map", { zoomControl: true, maxZoom: 19 });
-map.zoomControl.setPosition('bottomright');
+    document.getElementById("basemapToggle").addEventListener("click", () => {
+      basemapMode = (basemapMode === "SAT") ? "OSM" : "SAT";
+      localStorage.setItem("loteo_basemap", basemapMode);
 
-const sat = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 19, attribution: '© Esri' }
-).addTo(map);
-
-const osm = L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  { maxZoom: 19, attribution: '© OpenStreetMap' }
-);
-
-// Auto-switch to OSM when satellite tiles fail (e.g. zoom too high)
-let satErrorCount = 0;
-sat.on('tileerror', function() {
-  satErrorCount++;
-  if (isSat && satErrorCount >= 3) {
-    satErrorCount = 0;
-    map.removeLayer(sat);
-    osm.addTo(map);
-    isSat = false;
-    document.getElementById('toggleLabel').textContent = 'SAT';
-    document.getElementById('btnToggle').classList.add('active');
-    // Show subtle toast
-    showToast('Imagen no disponible — cambiando a mapa base');
-  }
-});
-sat.on('tileload', function() { satErrorCount = 0; });
-
-/* ── WhatsApp contacto ── */
-const WA_NUMBER = "56985962740"; // TODO: reemplaza por tu número real (sin +)
-
-/* ── Color by price ── */
-const buckets = { 25: '#5E9ED6', 30: '#2DA882', 40: '#D4882A' };
-
-function parseMM(v) {
-  const m = String(v || '').match(/(\d+)/);
-  return m ? Number(m[1]) : null;
-}
-
-function styleVenta(f) {
-  const mm = parseMM(f.properties?.Valor);
-  const color = buckets[mm] || '#5E9ED6';
-  return { color, weight: 2.5, fillColor: color, fillOpacity: 0.38, dashArray: null };
-}
-
-function styleVentaSelected(f) {
-  const mm = parseMM(f.properties?.Valor);
-  const color = buckets[mm] || '#5E9ED6';
-  return { color, weight: 3.5, fillColor: color, fillOpacity: 0.62, dashArray: null };
-}
-
-/* ── Layers ── */
-const baseLayer = L.geoJSON(BASE, {
-  style: { color: '#ff5050', weight: 2, fillOpacity: 0, opacity: 0.6 },
-  interactive: false
-}).addTo(map);
-
-let selectedLayer = null;
-
-const ventaLayer = L.geoJSON(LOTES, {
-  style: styleVenta,
-  onEachFeature: (f, l) => {
-    l.on('click', e => {
-      L.DomEvent.stopPropagation(e);
-      // Reset previous selection
-      if (selectedLayer && selectedLayer !== l) {
-        ventaLayer.resetStyle(selectedLayer);
+      if (basemapMode === "SAT") {
+        map.removeLayer(OSM);
+        SAT.addTo(map);
+        showToast("Base: Satélite (SAT)");
+      } else {
+        map.removeLayer(SAT);
+        OSM.addTo(map);
+        showToast("Base: OpenStreetMap (OSM)");
       }
-      selectedLayer = l;
-      l.setStyle(styleVentaSelected(f));
-      openPanel(f, l);
     });
-    l.on('mouseover', function() {
-      if (this !== selectedLayer) this.setStyle({ fillOpacity: 0.55, weight: 3 });
+
+    // ============================================================
+    // 2) GeoJSON (PEGA AQUÍ tus 2 loteos)
+    //    - loteo_base: solo dibujo "vendidos" borde rojo
+    //    - lotes_venta: consultables, achurado, con leyenda por "valor"
+    // ============================================================
+
+    // 🔴 Loteo base (vendidos) — ejemplo placeholder
+    const loteoBase = {
+      "type":"FeatureCollection",
+      "features":[
+        // Pega aquí tus polígonos "vendidos"
+        // {"type":"Feature","properties":{"estado":"vendido","nombre":"Lote X"},"geometry":{"type":"Polygon","coordinates":[[...] ]}}
+      ]
+    };
+
+    // 🟩 Lotes en venta — ejemplo placeholder
+    // Recomendado: properties: { lote:"A-12", estado:"en venta", valor:25|30|40, sup_m2:5000, moneda:"MM$", ... }
+    const lotesVenta = {
+      "type":"FeatureCollection",
+      "features":[
+        // Pega aquí tus polígonos "en venta"
+      ]
+    };
+
+    // ============================================================
+    // 3) Hachurado sólido (sin plugins) usando SVG <pattern>
+    // ============================================================
+    function ensureSvgDefs() {
+      const renderer = map.getRenderer(map)._container; // <svg> del renderer
+      if (!renderer) return null;
+
+      let defs = renderer.querySelector("defs");
+      if (!defs) {
+        defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        renderer.insertBefore(defs, renderer.firstChild);
+      }
+
+      // Pattern único (id estable)
+      let p = defs.querySelector("#hatchVenta");
+      if (!p) {
+        p = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+        p.setAttribute("id", "hatchVenta");
+        p.setAttribute("patternUnits", "userSpaceOnUse");
+        p.setAttribute("width", "10");
+        p.setAttribute("height", "10");
+        p.setAttribute("patternTransform", "rotate(35)");
+
+        // fondo semi-transparente
+        const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        bg.setAttribute("width", "10");
+        bg.setAttribute("height", "10");
+        bg.setAttribute("fill", "rgba(37,99,235,0.16)");
+        p.appendChild(bg);
+
+        // líneas del hatch
+        const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line1.setAttribute("x1", "0"); line1.setAttribute("y1", "0");
+        line1.setAttribute("x2", "0"); line1.setAttribute("y2", "10");
+        line1.setAttribute("stroke", "rgba(15,23,42,0.28)");
+        line1.setAttribute("stroke-width", "3");
+        p.appendChild(line1);
+
+        defs.appendChild(p);
+      }
+
+      return { svg: renderer, defs };
+    }
+
+    function applyHatchToLayer(layer) {
+      // Solo si es SVG path disponible
+      if (!layer || !layer._path) return;
+      ensureSvgDefs();
+      layer._path.setAttribute("fill", "url(#hatchVenta)");
+      layer._path.setAttribute("fill-opacity", "1");
+    }
+
+    // ============================================================
+    // 4) Estilos por valor (MM$ 25/30/40)
+    // ============================================================
+    function colorByValor(valor){
+      // base (stroke) por precio para diferenciar un poco
+      if (Number(valor) === 25) return "#2563eb"; // azul
+      if (Number(valor) === 30) return "#0ea5e9"; // cyan
+      if (Number(valor) === 40) return "#16a34a"; // verde
+      return "#334155";
+    }
+
+    const styleVendidos = {
+      color: "#dc2626",      // borde rojo
+      weight: 3,
+      fillColor: "rgba(220,38,38,0.08)",
+      fillOpacity: 0.15
+    };
+
+    function styleVenta(feature){
+      const v = feature?.properties?.valor;
+      return {
+        color: colorByValor(v),
+        weight: 2.5,
+        fillColor: "rgba(37,99,235,0.12)", // será reemplazado por hatch (pattern)
+        fillOpacity: 0.7
+      };
+    }
+
+    // ============================================================
+    // 5) Panel info (alto contraste)
+    // ============================================================
+    function badgeHtml(estado){
+      const e = String(estado || "").toLowerCase();
+      if (e.includes("vend")) return `<span class="badge badge--vendido">Vendido</span>`;
+      if (e.includes("reserv")) return `<span class="badge badge--reservado">Reservado</span>`;
+      return `<span class="badge badge--venta">En venta</span>`;
+    }
+
+    function fmtValor(valor){
+      if (valor === null || valor === undefined || valor === "") return "";
+      // si ya viene "MM$ 30" lo dejamos
+      const s = String(valor).trim();
+      if (s.includes("MM$")) return s;
+      const n = Number(s);
+      if (!Number.isFinite(n)) return s;
+      return `MM$ ${n}`;
+    }
+
+    function buildInfoTable(props){
+      const rows = [];
+      const push = (k, v) => {
+        if (v === null || v === undefined || String(v).trim() === "") return;
+        rows.push(`<tr><th>${k}</th><td>${v}</td></tr>`);
+      };
+
+      push("Lote", props.lote || props.LOTE || props.nombre || props.name || "");
+      push("Estado", (props.estado ? `${props.estado} ${badgeHtml(props.estado)}` : badgeHtml("en venta")));
+      push("Valor", fmtValor(props.valor ?? props.precio ?? props.VALOR ?? ""));
+      push("Superficie", props.sup_m2 ? `${props.sup_m2} m²` : (props.superficie || props.area || ""));
+      push("Proyecto", props.proyecto || props.loteo || "");
+      push("Observación", props.obs || props.descripcion || "");
+
+      // Link de contacto opcional
+      if (props.whatsapp || props.contacto || props.url) {
+        const link = props.whatsapp || props.contacto || props.url;
+        push("Contacto", `<a href="${link}" target="_blank" rel="noopener">Abrir contacto</a>`);
+      }
+
+      return `
+        <table>
+          ${rows.join("") || `<tr><th>Info</th><td>Sin datos en properties</td></tr>`}
+        </table>
+      `;
+    }
+
+    function setInfoPanel(feature){
+      const props = feature?.properties || {};
+      const title = (props.lote || props.LOTE || props.nombre || "Lote seleccionado");
+      const subtitle = `${fmtValor(props.valor ?? props.precio ?? "")}${props.sup_m2 ? " · " + props.sup_m2 + " m²" : ""}`;
+
+      const panel = document.getElementById("infoPanel");
+      const body = document.getElementById("infoBody");
+
+      // header
+      const header = panel.querySelector(".info-header");
+      header.innerHTML = `
+        <div class="info-title">${title} ${badgeHtml(props.estado || "en venta")}</div>
+        <div class="info-subtitle">${subtitle || "Detalle del lote seleccionado"}</div>
+      `;
+
+      // body
+      body.innerHTML = buildInfoTable(props);
+    }
+
+    // ============================================================
+    // 6) Capas + click (centrar al polígono y mostrar tabla)
+    // ============================================================
+    const baseLayer = L.geoJSON(loteoBase, {
+      style: styleVendidos,
+      onEachFeature: (feature, layer) => {
+        layer.on("click", () => {
+          // centramos pero NO mostramos tabla (solo “vendidos”)
+          const b = layer.getBounds?.();
+          if (b && b.isValid()) map.fitBounds(b, { padding:[30,30], maxZoom: 16 });
+          showToast("Lote vendido (solo referencia)");
+        });
+      }
+    }).addTo(map);
+
+    const ventaLayer = L.geoJSON(lotesVenta, {
+      style: styleVenta,
+      onEachFeature: (feature, layer) => {
+        layer.on("click", () => {
+          const b = layer.getBounds?.();
+          if (b && b.isValid()) map.fitBounds(b, { padding:[40,40], maxZoom: 16 });
+
+          setInfoPanel(feature);
+        });
+
+        // Aplica hatch cuando Leaflet ya tiene el path
+        layer.on("add", () => applyHatchToLayer(layer));
+      }
+    }).addTo(map);
+
+    // Reaplicar hatch al cambiar zoom (por re-render)
+    map.on("zoomend", () => {
+      ventaLayer.eachLayer(l => applyHatchToLayer(l));
     });
-    l.on('mouseout', function() {
-      if (this !== selectedLayer) ventaLayer.resetStyle(this);
-    });
-  }
-}).addTo(map);
 
-/* ── Fit bounds (v4 proven: synchronous, no delays needed) ── */
-const group = L.featureGroup([baseLayer, ventaLayer]);
+    // ============================================================
+    // 7) Zoom inicial: fit a todas las capas, pero sin perder satélite
+    // ============================================================
+    function fitAll() {
+      const groups = [];
+      if (baseLayer.getBounds && baseLayer.getBounds().isValid()) groups.push(baseLayer.getBounds());
+      if (ventaLayer.getBounds && ventaLayer.getBounds().isValid()) groups.push(ventaLayer.getBounds());
 
-function fitView() {
-  map.fitBounds(group.getBounds().pad(0.12));
-  if (map.getZoom() > 19) map.setZoom(19);
-}
-fitView();
+      if (!groups.length) {
+        // fallback: Chile centro aprox
+        map.setView([-33.45, -70.65], 12);
+        showToast("Pega tus GeoJSON en el index.html (loteoBase / lotesVenta).");
+        return;
+      }
 
-/* ── Panel ── */
-const panel = document.getElementById('panel');
+      // unión de bounds
+      let b = groups[0];
+      for (let i=1;i<groups.length;i++) b = b.extend(groups[i]);
 
-function openPanel(f, l) {
-  const p = f.properties || {};
-  const mm = parseMM(p.Valor);
-  const color = buckets[mm] || '#5E9ED6';
+      map.fitBounds(b, { padding:[35,35] });
 
-  document.getElementById('panel-name').textContent = p.Name || p.id || 'Lote';
-  document.getElementById('panel-id').textContent = p.id || '';
-  document.getElementById('panel-price-value').textContent = mm ? mm : (p.Valor || '—');
-  document.getElementById('panel-price-value').style.color = color;
+      // Ajuste para mantener satélite "nítido": preferimos >=14 si es posible
+      const z = map.getZoom();
+      if (z > 16) map.setZoom(16);
+      if (z < 14) map.setZoom(14);
+    }
 
-  // Extra rows
-  const rowsEl = document.getElementById('panel-rows');
-  const labels = { id: 'Referencia', Name: 'Nombre', Valor: 'Precio' };
-  const skip = new Set(['id', 'Name', 'Valor']);
-  let html = '';
-  for (const k in p) {
-    if (skip.has(k) || !p[k]) continue;
-    html += `<div class="p-row"><span class="p-label">${labels[k] || k}</span><span class="p-value">${p[k]}</span></div>`;
-  }
-  rowsEl.innerHTML = html;
-
-  // WhatsApp CTA
-  const msg = encodeURIComponent(`Hola, me interesa el ${p.Name || 'lote'} (${p.id || ''}) — Valor: ${p.Valor || ''}`);
-  document.getElementById('btn-wa').href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
-
-  // Zoom button
-  document.getElementById('btn-zoom').onclick = () => {
-    map.fitBounds(l.getBounds().pad(0.3));
-    if (map.getZoom() > 19) map.setZoom(19);
-  };
-
-  panel.classList.add('open');
-}
-
-function closePanel() {
-  panel.classList.remove('open');
-  setTimeout(() => { panel.style.display = ''; }, 10);
-  if (selectedLayer) {
-    ventaLayer.resetStyle(selectedLayer);
-    selectedLayer = null;
-  }
-}
-
-document.getElementById('panel-close').onclick = closePanel;
-map.on('click', closePanel);
-
-/* ── Buttons ── */
-document.getElementById('btnFit').onclick = fitView;
-
-let isSat = true;
-
-// ✅ Satélite: limitar zoom "visual" (antes de pixelarse) y auto-cambiar a OSM si el usuario se acerca más
-const SAT_MAX_VISUAL_ZOOM = 17; // ajusta si quieres (17 recomendado)
-
-// Si estamos en SAT y el usuario supera el zoom máximo visual -> pasamos a OSM automáticamente
-map.on('zoomend', function () {
-  const z = map.getZoom();
-  if (isSat && z > SAT_MAX_VISUAL_ZOOM) {
-    map.removeLayer(sat);
-    osm.addTo(map);
-    isSat = false;
-    document.getElementById('toggleLabel').textContent = 'SAT';
-    document.getElementById('btnToggle').classList.add('active');
-    showToast('Zoom máximo de imagen — cambiando a OSM');
-  }
-});
-document.getElementById('btnToggle').onclick = function () {
-  if (isSat) {
-    // SAT -> OSM
-    map.removeLayer(sat);
-    osm.addTo(map);
-    document.getElementById('toggleLabel').textContent = 'SAT';
-    this.classList.add('active');
-    isSat = false;
-    return;
-  }
-
-  // OSM -> SAT (si estamos muy cerca, bajamos zoom a un nivel "usable" antes de volver a satélite)
-  if (map.getZoom() > SAT_MAX_VISUAL_ZOOM) {
-    map.setZoom(SAT_MAX_VISUAL_ZOOM);
-  }
-  map.removeLayer(osm);
-  sat.addTo(map);
-  document.getElementById('toggleLabel').textContent = 'OSM';
-  this.classList.remove('active');
-  isSat = true;
-};
-/* ── Lot count ── */
-document.getElementById('countNum').textContent = LOTES.features.length;
-</script>
-<div id="toast"></div>
+    // Espera un tick para que renderer exista
+    setTimeout(() => {
+      fitAll();
+      // hatch init
+      ventaLayer.eachLayer(l => applyHatchToLayer(l));
+    }, 60);
+  </script>
 </body>
 </html>
