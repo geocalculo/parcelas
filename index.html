@@ -1,169 +1,195 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Loteo del Valle — Lotes en Venta</title>
 
-  <!-- Tipografías opcionales (si ya las usas) -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ✅ Nuevo CSS de contraste (crear en /css/index.css) -->
+  <!-- ✅ UX panel / tabla / badges -->
   <link rel="stylesheet" href="css/index.css"/>
 
   <style>
-    /* Layout base (por si tu CSS global no lo define) */
+    /* Solo layout + controles (el panel usa index.css) */
     :root{
-      --ui-gap: 14px;
-      --topbar-h: 56px;
+      --gap: 14px;
+      --headerH: 58px;
+      --sideW: 380px;
     }
-    html, body { height:100%; margin:0; }
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; margin:0; }
     body{
       font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #0b0f14;
+      background:#0b0f14;
     }
 
     .app{
-      height: 100%;
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: var(--ui-gap);
-      padding: var(--ui-gap);
-      box-sizing: border-box;
+      height:100%;
+      display:grid;
+      grid-template-columns: 1fr var(--sideW);
+      gap: var(--gap);
+      padding: var(--gap);
     }
 
     .mapWrap{
-      position: relative;
+      position:relative;
       border-radius: 16px;
-      overflow: hidden;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,0.10);
       box-shadow: 0 18px 44px rgba(0,0,0,.35);
-      border: 1px solid rgba(255,255,255,.10);
       min-height: 520px;
     }
 
-    #map{ height: 100%; width: 100%; }
+    #map{ height:100%; width:100%; }
 
-    /* Top controls */
-    .floatingControls{
+    /* Header flotante simple */
+    .topbar{
       position:absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 1000;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      pointer-events: none; /* para no bloquear mapa salvo en botones */
-    }
-
-    .chip{
-      pointer-events: auto;
-      background: rgba(255,255,255,.92);
-      border: 1px solid rgba(15,23,42,.12);
-      border-radius: 999px;
-      padding: 8px 10px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 1100;
       display:flex;
-      gap: 8px;
       align-items:center;
-      box-shadow: 0 10px 22px rgba(0,0,0,.18);
-      backdrop-filter: blur(6px);
-    }
-    .chip b{ font-weight: 900; font-size: 12px; color:#0f172a; }
-
-    .toggleBtn{
-      pointer-events:auto;
-      border: 1px solid rgba(15,23,42,.14);
-      background: rgba(255,255,255,.92);
-      border-radius: 12px;
+      justify-content:space-between;
+      gap:10px;
       padding: 10px 12px;
-      font-weight: 900;
-      cursor: pointer;
-      color:#0f172a;
-      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+      border-radius: 14px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: rgba(255,255,255,0.92);
     }
-    .toggleBtn:hover{ filter: brightness(0.98); }
 
-    /* Legend */
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width: 240px;
+    }
+    .brandMark{
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 800;
+    }
+    .brandTxt .t1{
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 700;
+      letter-spacing: .2px;
+      line-height: 1.05;
+      font-size: 18px;
+    }
+    .brandTxt .t2{
+      font-size: 10px;
+      opacity: .75;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Botones compactos para topbar */
+    .tbtn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.92);
+      cursor:pointer;
+      font-weight: 700;
+      font-size: 12px;
+      user-select:none;
+    }
+    .tbtn:hover{ background: rgba(255,255,255,0.14); }
+    .tbtn svg{ width:14px; height:14px; opacity:.9; }
+
+    /* Leyenda */
     .legend{
-      pointer-events: auto;
       position:absolute;
       left: 12px;
       bottom: 12px;
-      z-index: 1000;
-      background: rgba(255,255,255,.94);
-      border: 1px solid rgba(15,23,42,.12);
+      z-index: 1100;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.92);
       border-radius: 14px;
       padding: 10px 12px;
-      box-shadow: 0 12px 26px rgba(0,0,0,.18);
-      min-width: 210px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      min-width: 220px;
     }
-    .legend .title{
-      font-weight: 900;
-      font-size: 12px;
-      color:#0f172a;
-      margin-bottom: 8px;
-      display:flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items:center;
-    }
-    .legend .row{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      padding: 6px 0;
-      font-size: 12.5px;
-      color:#0f172a;
+    .legend h4{
+      margin:0 0 8px;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .78;
       font-weight: 800;
     }
-    .swatch{
-      width: 18px; height: 12px;
-      border-radius: 4px;
-      border: 1px solid rgba(15,23,42,.18);
-      flex: 0 0 auto;
-    }
-    .swatch.vendidos{ border:2px solid #dc2626; background: rgba(220,38,38,.10); }
-    .swatch.venta25{ background: rgba(37,99,235,.12); }
-    .swatch.venta30{ background: rgba(14,165,233,.14); }
-    .swatch.venta40{ background: rgba(22,163,74,.14); }
-    .legend .note{
-      margin-top: 6px;
-      font-size: 11.5px;
-      color:#475569;
+    .legRow{
+      display:flex; align-items:center; gap:10px;
+      font-size: 12.5px;
       font-weight: 700;
+      padding: 5px 0;
     }
+    .dot{
+      width: 14px; height: 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+    .dot.base{ border: 2px solid rgba(255,80,80,0.85); background: transparent; }
 
-    /* Info panel wrapper (usa tu index.css para contraste) */
+    /* Columna derecha */
     .side{
-      display: flex;
-      flex-direction: column;
-      gap: var(--ui-gap);
+      display:flex;
+      flex-direction:column;
+      gap: var(--gap);
       min-width: 320px;
     }
 
-    .infoEmpty{
-      padding: 14px 16px;
-      color: #475569;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    /* Responsive */
+    /* Responsive: móvil = mapa full y panel abajo (sheet simple) */
     @media (max-width: 980px){
-      .app{
-        grid-template-columns: 1fr;
-      }
+      .app{ grid-template-columns: 1fr; padding:0; gap:0; }
+      .mapWrap{ border-radius:0; border:none; box-shadow:none; height:100vh; min-height:100vh; }
       .side{
-        order: 2;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 2000;
+        padding: 10px;
+        pointer-events:none;
       }
-      .mapWrap{
-        min-height: 520px;
+      #infoPanel{
+        pointer-events:auto;
+        max-height: 62vh;
+        transform: translateY(calc(100% + 16px));
+        transition: transform .22s ease;
       }
+      #infoPanel.open{
+        transform: translateY(0);
+      }
+      .topbar{ left:10px; right:10px; }
     }
 
     /* Toast */
@@ -171,24 +197,20 @@
       position: fixed;
       top: 14px;
       right: 14px;
-      z-index: 2000;
-      background: rgba(15,23,42,.95);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 12px;
+      z-index: 3000;
+      background: rgba(0,0,0,0.72);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: rgba(255,255,255,0.92);
       padding: 10px 12px;
+      border-radius: 12px;
       font-weight: 800;
-      box-shadow: 0 18px 44px rgba(0,0,0,.35);
       opacity: 0;
       transform: translateY(-6px);
       transition: .18s ease;
       pointer-events:none;
-      max-width: 340px;
+      max-width: 360px;
     }
-    #toast.show{
-      opacity: 1;
-      transform: translateY(0);
-    }
+    #toast.show{ opacity:1; transform: translateY(0); }
   </style>
 
   <script>
@@ -196,7 +218,7 @@
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2600);
+      setTimeout(() => t.classList.remove('show'), 2200);
     }
   </script>
 </head>
@@ -206,38 +228,68 @@
 
   <div class="app">
     <div class="mapWrap">
-      <div class="floatingControls">
-        <button id="basemapToggle" class="toggleBtn" title="Cambiar base">SAT / OSM</button>
-        <div class="chip" title="Haz clic en un polígono para ver sus datos">
-          <b>Tip:</b> clic en un lote para centrar y ver ficha
+      <div class="topbar">
+        <div class="brand">
+          <div class="brandMark">⛰</div>
+          <div class="brandTxt">
+            <div class="t1">Loteo del Valle</div>
+            <div class="t2">Atacama · Chile</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <div style="font-size:12px;opacity:.85;font-weight:700">
+            <span id="countNum">—</span> lotes disponibles
+          </div>
+
+          <button class="tbtn" id="btnFit" title="Ajustar vista">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/>
+            </svg>
+            Vista
+          </button>
+
+          <button class="tbtn" id="btnToggle" title="Cambiar mapa base">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="8" cy="8" r="6.5"/>
+              <path d="M8 1.5C8 1.5 11 5 11 8s-3 6.5-3 6.5"/>
+              <path d="M8 1.5C8 1.5 5 5 5 8s3 6.5 3 6.5"/>
+              <path d="M1.5 8h13"/>
+            </svg>
+            <span id="toggleLabel">OSM</span>
+          </button>
         </div>
       </div>
 
       <div id="map"></div>
 
-      <div class="legend" id="legend">
-        <div class="title">
-          <span>Leyenda</span>
-          <span style="font-weight:800;color:#475569;font-size:11.5px">zoom máx 16</span>
-        </div>
-        <div class="row"><span class="swatch vendidos"></span> Vendidos (borde rojo)</div>
-        <div class="row"><span class="swatch venta25"></span> En venta — MM$ 25</div>
-        <div class="row"><span class="swatch venta30"></span> En venta — MM$ 30</div>
-        <div class="row"><span class="swatch venta40"></span> En venta — MM$ 40</div>
-        <div class="note">* Los lotes en venta se muestran con achurado sólido.</div>
+      <div class="legend">
+        <h4>Referencias</h4>
+        <div class="legRow"><span class="dot" style="background: var(--c25, #5E9ED6)"></span> En venta — MM$ 25</div>
+        <div class="legRow"><span class="dot" style="background: var(--c30, #2DA882)"></span> En venta — MM$ 30</div>
+        <div class="legRow"><span class="dot" style="background: var(--c40, #D4882A)"></span> En venta — MM$ 40</div>
+        <div class="legRow"><span class="dot base"></span> Loteo base</div>
       </div>
     </div>
 
-    <!-- ✅ Panel info: se apoya en css/index.css (alto contraste) -->
+    <!-- ✅ Panel usando index.css -->
     <div class="side">
       <aside id="infoPanel" class="info-panel">
         <div class="info-header">
           <div class="info-title">Información del lote</div>
           <div class="info-subtitle">Haz clic en un polígono del mapa</div>
         </div>
-        <div class="info-body" id="infoBody">
-          <div class="infoEmpty">
-            Selecciona un lote para ver su tabla de datos y centrar el mapa.
+
+        <div class="info-body">
+          <div id="infoActions" style="display:none; margin-bottom: 10px; gap:8px;">
+            <a id="btn-wa" class="btn btn-primary" href="#" target="_blank" rel="noopener">Consultar</a>
+            <button id="btn-zoom" class="btn" type="button">Zoom</button>
+          </div>
+
+          <div id="infoTable">
+            <div style="color: var(--muted); font-weight: 700; font-size: 13px;">
+              Selecciona un lote para ver su ficha.
+            </div>
           </div>
         </div>
       </aside>
@@ -245,280 +297,208 @@
   </div>
 
   <script>
-    // ============================================================
-    // 1) Base maps (SAT/OSM) + prefer SVG para poder achurar (pattern)
-    // ============================================================
-    const map = L.map("map", {
-      zoomControl: true,
-      preferCanvas: false, // ✅ necesario para manipular SVG paths (hachurado)
-    });
+    /* =========================
+       DATA (PEGAR / MANTENER)
+       ========================= */
+    const LOTES = {"type":"FeatureCollection","name":"lotes_en_venta","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{"id":"loteo_02.5","Name":"Lote 16I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52161584242097,-27.326792353683146,0.0],[-70.52109446342098,-27.326806357683147,0.0],[-70.52114172642098,-27.327706350683147,0.0],[-70.52163208742107,-27.327695757683248,0.0],[-70.52161584242097,-27.326792353683146,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.10","Name":"Lote 21I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51966037542107,-27.327446139683147,0.0],[-70.51930372042098,-27.327121472683146,0.0],[-70.51862709542107,-27.327219474683147,0.0],[-70.51866029642098,-27.327309946683247,0.0],[-70.51873374642098,-27.327449512683145,0.0],[-70.51882531442098,-27.327554963683145,0.0],[-70.51899569742098,-27.327720145683145,0.0],[-70.51911900042097,-27.327810075683146,0.0],[-70.51925280642098,-27.327897513683148,0.0],[-70.51966037542107,-27.327446139683147,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.11","Name":"Lote 22I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51933671142108,-27.326562208683146,0.0],[-70.51852211042097,-27.326586541683145,0.0],[-70.51852281342097,-27.326729051683145,0.0],[-70.51854531542098,-27.326864442683146,0.0],[-70.51856855642107,-27.326994105683145,0.0],[-70.51859901142097,-27.327127950683145,0.0],[-70.51862732842098,-27.327219332683146,0.0],[-70.51930372042098,-27.327121472683146,0.0],[-70.51933671142108,-27.326562208683146,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.12","Name":"Lote 23I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51936792942098,-27.326030953683148,0.0],[-70.51846048742098,-27.326058180683248,0.0],[-70.51852211042097,-27.326586541683145,0.0],[-70.51933671142108,-27.326562208683146,0.0],[-70.51936792942098,-27.326030953683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.13","Name":"Lote 24I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51939598542097,-27.325558985683145,0.0],[-70.51835057642097,-27.325580300683246,0.0],[-70.51839488042097,-27.325677282683145,0.0],[-70.51842954542097,-27.325802967683146,0.0],[-70.51846043442097,-27.326058141683145,0.0],[-70.51936792942098,-27.326030953683148,0.0],[-70.51939598542097,-27.325558985683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.14","Name":"Lote 25I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.51940828842098,-27.325350124683247,0.0],[-70.51894965042098,-27.324790935683147,0.0],[-70.51835057642097,-27.325580300683246,0.0],[-70.51939598542097,-27.325558985683145,0.0],[-70.51940828842098,-27.325350124683247,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.17","Name":"Lote 28I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52099435242107,-27.326259813683148,0.0],[-70.52013374642108,-27.326331143683145,0.0],[-70.52025260842098,-27.326684736683145,0.0],[-70.52033578042098,-27.326914347683147,0.0],[-70.52102477042098,-27.326831661683148,0.0],[-70.52099435242107,-27.326259813683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.18","Name":"Lote 29I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52102477042098,-27.326831661683148,0.0],[-70.52033578042098,-27.326914347683147,0.0],[-70.52035762142097,-27.326977701683145,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52106561342097,-27.327642159683148,0.0],[-70.52102477042098,-27.326831661683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.19","Name":"Lote 30I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.52106561342097,-27.327642159683148,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52031356442097,-27.327946415683147,0.0],[-70.52098868142097,-27.328560792683145,0.0],[-70.52099873642098,-27.328569747683247,0.0],[-70.52101564242098,-27.328576373683145,0.0],[-70.52102671142097,-27.328580239683248,0.0],[-70.52104331542097,-27.328583352683147,0.0],[-70.52106024042098,-27.328581922683146,0.0],[-70.52107343142097,-27.328577420683146,0.0],[-70.52108942142108,-27.328567675683146,0.0],[-70.52110254642098,-27.328554012683146,0.0],[-70.52111068742097,-27.328540972683147,0.0],[-70.52111375342098,-27.328525229683155,0.0],[-70.52111304842097,-27.328511802683146,0.0],[-70.52106561342097,-27.327642159683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.20","Name":"Lote 31I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.52035762142097,-27.326977701683145,0.0],[-70.51967393242097,-27.327366963683147,0.0],[-70.52031356442097,-27.327946415683147,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52035762142097,-27.326977701683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.21","Name":"Lote 32I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.52025260842098,-27.326684736683145,0.0],[-70.51943560442098,-27.326087722683145,0.0],[-70.51939782242097,-27.326729318683146,0.0],[-70.51967393242097,-27.327366963683147,0.0],[-70.52035762142097,-27.326977701683145,0.0],[-70.52025260842098,-27.326684736683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.22","Name":"Lote 33I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.52005514042098,-27.326089484683248,0.0],[-70.51943560442098,-27.326087722683145,0.0],[-70.51939782242097,-27.326729318683146,0.0],[-70.52025260842098,-27.326684736683145,0.0],[-70.52005514042098,-27.326089484683248,0.0]]]}}]};
 
-    const SAT = L.tileLayer(
+    const BASE = {"type":"FeatureCollection","name":"loteo_base","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{},"geometry":{"type":"MultiPolygon","coordinates":[[[[-70.52445433617412,-27.318817644288156,0.0],[-70.52381075937411,-27.318643967888157,0.0],[-70.52341043907411,-27.319169124488155,0.0],[-70.52394062687411,-27.319491554788154,0.0],[-70.52445433617412,-27.318817644288156,0.0]]]]}},{"type":"Feature","properties":{},"geometry":{"type":"MultiPolygon","coordinates":[[[[-70.52393881097412,-27.319490327488158,0.0],[-70.52340841437412,-27.319167770188155,0.0],[-70.5229493360741,-27.319770000788157,0.0],[-70.5234730614741,-27.320088501688147,0.0],[-70.52393881097412,-27.319490327488158,0.0]]]]}}]};
+
+    /* =========================
+       MAP INIT
+       ========================= */
+    const map = L.map("map", { zoomControl: true, maxZoom: 16 });
+    map.zoomControl.setPosition("bottomright");
+
+    const sat = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 16, attribution: "Esri" }
-    );
+      { maxZoom: 16, attribution: "© Esri" }
+    ).addTo(map);
 
-    const OSM = L.tileLayer(
+    const osm = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: "© OpenStreetMap" }
     );
 
-    let basemapMode = localStorage.getItem("loteo_basemap") || "SAT";
-    (basemapMode === "OSM" ? OSM : SAT).addTo(map);
+    let isSat = true;
 
-    document.getElementById("basemapToggle").addEventListener("click", () => {
-      basemapMode = (basemapMode === "SAT") ? "OSM" : "SAT";
-      localStorage.setItem("loteo_basemap", basemapMode);
+    /* =========================
+       STYLES
+       ========================= */
+    const buckets = { 25: "#5E9ED6", 30: "#2DA882", 40: "#D4882A" };
 
-      if (basemapMode === "SAT") {
-        map.removeLayer(OSM);
-        SAT.addTo(map);
-        showToast("Base: Satélite (SAT)");
-      } else {
-        map.removeLayer(SAT);
-        OSM.addTo(map);
-        showToast("Base: OpenStreetMap (OSM)");
+    function parseMM(v){
+      const m = String(v || "").match(/(\d+)/);
+      return m ? Number(m[1]) : null;
+    }
+
+    function styleVenta(f){
+      const mm = parseMM(f.properties?.Valor);
+      const color = buckets[mm] || "#5E9ED6";
+      return { color, weight: 2.5, fillColor: color, fillOpacity: 0.38 };
+    }
+    function styleVentaSelected(f){
+      const mm = parseMM(f.properties?.Valor);
+      const color = buckets[mm] || "#5E9ED6";
+      return { color, weight: 3.5, fillColor: color, fillOpacity: 0.62 };
+    }
+
+    const baseLayer = L.geoJSON(BASE, {
+      style: { color: "#ff5050", weight: 2, fillOpacity: 0, opacity: 0.65 },
+      interactive: false
+    }).addTo(map);
+
+    let selectedLayer = null;
+
+    const ventaLayer = L.geoJSON(LOTES, {
+      style: styleVenta,
+      onEachFeature: (f, l) => {
+        l.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+
+          if (selectedLayer && selectedLayer !== l) {
+            ventaLayer.resetStyle(selectedLayer);
+          }
+          selectedLayer = l;
+          l.setStyle(styleVentaSelected(f));
+
+          openInfo(f, l);
+        });
+
+        l.on("mouseover", function(){
+          if (this !== selectedLayer) this.setStyle({ fillOpacity: 0.55, weight: 3 });
+        });
+        l.on("mouseout", function(){
+          if (this !== selectedLayer) ventaLayer.resetStyle(this);
+        });
       }
-    });
+    }).addTo(map);
 
-    // ============================================================
-    // 2) GeoJSON (PEGA AQUÍ tus 2 loteos)
-    //    - loteo_base: solo dibujo "vendidos" borde rojo
-    //    - lotes_venta: consultables, achurado, con leyenda por "valor"
-    // ============================================================
+    const group = L.featureGroup([baseLayer, ventaLayer]);
 
-    // 🔴 Loteo base (vendidos) — ejemplo placeholder
-    const loteoBase = {
-      "type":"FeatureCollection",
-      "features":[
-        // Pega aquí tus polígonos "vendidos"
-        // {"type":"Feature","properties":{"estado":"vendido","nombre":"Lote X"},"geometry":{"type":"Polygon","coordinates":[[...] ]}}
-      ]
-    };
-
-    // 🟩 Lotes en venta — ejemplo placeholder
-    // Recomendado: properties: { lote:"A-12", estado:"en venta", valor:25|30|40, sup_m2:5000, moneda:"MM$", ... }
-    const lotesVenta = {
-      "type":"FeatureCollection",
-      "features":[
-        // Pega aquí tus polígonos "en venta"
-      ]
-    };
-
-    // ============================================================
-    // 3) Hachurado sólido (sin plugins) usando SVG <pattern>
-    // ============================================================
-    function ensureSvgDefs() {
-      const renderer = map.getRenderer(map)._container; // <svg> del renderer
-      if (!renderer) return null;
-
-      let defs = renderer.querySelector("defs");
-      if (!defs) {
-        defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        renderer.insertBefore(defs, renderer.firstChild);
+    function fitView(){
+      const b = group.getBounds();
+      if (!b || !b.isValid()){
+        showToast("No hay bounds válidos (revisa GeoJSON).");
+        return;
       }
-
-      // Pattern único (id estable)
-      let p = defs.querySelector("#hatchVenta");
-      if (!p) {
-        p = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
-        p.setAttribute("id", "hatchVenta");
-        p.setAttribute("patternUnits", "userSpaceOnUse");
-        p.setAttribute("width", "10");
-        p.setAttribute("height", "10");
-        p.setAttribute("patternTransform", "rotate(35)");
-
-        // fondo semi-transparente
-        const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        bg.setAttribute("width", "10");
-        bg.setAttribute("height", "10");
-        bg.setAttribute("fill", "rgba(37,99,235,0.16)");
-        p.appendChild(bg);
-
-        // líneas del hatch
-        const line1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line1.setAttribute("x1", "0"); line1.setAttribute("y1", "0");
-        line1.setAttribute("x2", "0"); line1.setAttribute("y2", "10");
-        line1.setAttribute("stroke", "rgba(15,23,42,0.28)");
-        line1.setAttribute("stroke-width", "3");
-        p.appendChild(line1);
-
-        defs.appendChild(p);
-      }
-
-      return { svg: renderer, defs };
+      map.fitBounds(b.pad(0.12), { maxZoom: 16 });
     }
 
-    function applyHatchToLayer(layer) {
-      // Solo si es SVG path disponible
-      if (!layer || !layer._path) return;
-      ensureSvgDefs();
-      layer._path.setAttribute("fill", "url(#hatchVenta)");
-      layer._path.setAttribute("fill-opacity", "1");
-    }
+    /* =========================
+       INFO PANEL (index.css)
+       ========================= */
+    const WA_NUMBER = "56985962740"; // <- tu número (sin +)
 
-    // ============================================================
-    // 4) Estilos por valor (MM$ 25/30/40)
-    // ============================================================
-    function colorByValor(valor){
-      // base (stroke) por precio para diferenciar un poco
-      if (Number(valor) === 25) return "#2563eb"; // azul
-      if (Number(valor) === 30) return "#0ea5e9"; // cyan
-      if (Number(valor) === 40) return "#16a34a"; // verde
-      return "#334155";
-    }
+    function openInfo(feature, layer){
+      const p = feature.properties || {};
+      const mm = parseMM(p.Valor);
+      const precio = p.Valor || (mm ? `MM$ ${mm}` : "—");
 
-    const styleVendidos = {
-      color: "#dc2626",      // borde rojo
-      weight: 3,
-      fillColor: "rgba(220,38,38,0.08)",
-      fillOpacity: 0.15
-    };
+      // Header panel
+      const titleEl = document.querySelector("#infoPanel .info-title");
+      const subEl   = document.querySelector("#infoPanel .info-subtitle");
 
-    function styleVenta(feature){
-      const v = feature?.properties?.valor;
-      return {
-        color: colorByValor(v),
-        weight: 2.5,
-        fillColor: "rgba(37,99,235,0.12)", // será reemplazado por hatch (pattern)
-        fillOpacity: 0.7
-      };
-    }
+      titleEl.textContent = p.Name || p.id || "Lote";
+      subEl.textContent   = (p.id ? p.id + " · " : "") + (precio || "");
 
-    // ============================================================
-    // 5) Panel info (alto contraste)
-    // ============================================================
-    function badgeHtml(estado){
-      const e = String(estado || "").toLowerCase();
-      if (e.includes("vend")) return `<span class="badge badge--vendido">Vendido</span>`;
-      if (e.includes("reserv")) return `<span class="badge badge--reservado">Reservado</span>`;
-      return `<span class="badge badge--venta">En venta</span>`;
-    }
+      // Actions
+      const actions = document.getElementById("infoActions");
+      actions.style.display = "flex";
 
-    function fmtValor(valor){
-      if (valor === null || valor === undefined || valor === "") return "";
-      // si ya viene "MM$ 30" lo dejamos
-      const s = String(valor).trim();
-      if (s.includes("MM$")) return s;
-      const n = Number(s);
-      if (!Number.isFinite(n)) return s;
-      return `MM$ ${n}`;
-    }
-
-    function buildInfoTable(props){
+      // Tabla
       const rows = [];
-      const push = (k, v) => {
-        if (v === null || v === undefined || String(v).trim() === "") return;
+      const push = (k,v) => {
+        if (v === undefined || v === null || String(v).trim()==="") return;
         rows.push(`<tr><th>${k}</th><td>${v}</td></tr>`);
       };
 
-      push("Lote", props.lote || props.LOTE || props.nombre || props.name || "");
-      push("Estado", (props.estado ? `${props.estado} ${badgeHtml(props.estado)}` : badgeHtml("en venta")));
-      push("Valor", fmtValor(props.valor ?? props.precio ?? props.VALOR ?? ""));
-      push("Superficie", props.sup_m2 ? `${props.sup_m2} m²` : (props.superficie || props.area || ""));
-      push("Proyecto", props.proyecto || props.loteo || "");
-      push("Observación", props.obs || props.descripcion || "");
-
-      // Link de contacto opcional
-      if (props.whatsapp || props.contacto || props.url) {
-        const link = props.whatsapp || props.contacto || props.url;
-        push("Contacto", `<a href="${link}" target="_blank" rel="noopener">Abrir contacto</a>`);
+      push("Referencia", p.id || "");
+      push("Nombre", p.Name || "");
+      push("Precio", p.Valor || "");
+      for (const k in p){
+        if (k === "id" || k === "Name" || k === "Valor") continue;
+        push(k, p[k]);
       }
 
-      return `
-        <table>
-          ${rows.join("") || `<tr><th>Info</th><td>Sin datos en properties</td></tr>`}
-        </table>
+      document.getElementById("infoTable").innerHTML = `
+        <table>${rows.join("") || `<tr><th>Info</th><td>Sin datos</td></tr>`}</table>
       `;
+
+      // WhatsApp
+      const msg = encodeURIComponent(`Hola, me interesa el ${p.Name || "lote"} (${p.id || ""}) — Valor: ${p.Valor || ""}`);
+      document.getElementById("btn-wa").href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
+
+      // Zoom
+      document.getElementById("btn-zoom").onclick = () => {
+        map.fitBounds(layer.getBounds().pad(0.3), { maxZoom: 16 });
+      };
+
+      // Mobile: abrir panel como sheet
+      if (window.matchMedia("(max-width: 980px)").matches){
+        document.getElementById("infoPanel").classList.add("open");
+      }
     }
 
-    function setInfoPanel(feature){
-      const props = feature?.properties || {};
-      const title = (props.lote || props.LOTE || props.nombre || "Lote seleccionado");
-      const subtitle = `${fmtValor(props.valor ?? props.precio ?? "")}${props.sup_m2 ? " · " + props.sup_m2 + " m²" : ""}`;
-
+    function closeInfo(){
       const panel = document.getElementById("infoPanel");
-      const body = document.getElementById("infoBody");
-
-      // header
-      const header = panel.querySelector(".info-header");
-      header.innerHTML = `
-        <div class="info-title">${title} ${badgeHtml(props.estado || "en venta")}</div>
-        <div class="info-subtitle">${subtitle || "Detalle del lote seleccionado"}</div>
-      `;
-
-      // body
-      body.innerHTML = buildInfoTable(props);
+      panel.classList.remove("open");
+      if (selectedLayer){
+        ventaLayer.resetStyle(selectedLayer);
+        selectedLayer = null;
+      }
     }
 
-    // ============================================================
-    // 6) Capas + click (centrar al polígono y mostrar tabla)
-    // ============================================================
-    const baseLayer = L.geoJSON(loteoBase, {
-      style: styleVendidos,
-      onEachFeature: (feature, layer) => {
-        layer.on("click", () => {
-          // centramos pero NO mostramos tabla (solo “vendidos”)
-          const b = layer.getBounds?.();
-          if (b && b.isValid()) map.fitBounds(b, { padding:[30,30], maxZoom: 16 });
-          showToast("Lote vendido (solo referencia)");
-        });
-      }
-    }).addTo(map);
+    map.on("click", closeInfo);
 
-    const ventaLayer = L.geoJSON(lotesVenta, {
-      style: styleVenta,
-      onEachFeature: (feature, layer) => {
-        layer.on("click", () => {
-          const b = layer.getBounds?.();
-          if (b && b.isValid()) map.fitBounds(b, { padding:[40,40], maxZoom: 16 });
+    /* =========================
+       BUTTONS
+       ========================= */
+    document.getElementById("btnFit").onclick = () => {
+      map.invalidateSize();
+      fitView();
+    };
 
-          setInfoPanel(feature);
-        });
-
-        // Aplica hatch cuando Leaflet ya tiene el path
-        layer.on("add", () => applyHatchToLayer(layer));
-      }
-    }).addTo(map);
-
-    // Reaplicar hatch al cambiar zoom (por re-render)
+    const SAT_MAX_VISUAL_ZOOM = 16;
     map.on("zoomend", () => {
-      ventaLayer.eachLayer(l => applyHatchToLayer(l));
+      if (isSat && map.getZoom() > SAT_MAX_VISUAL_ZOOM){
+        map.removeLayer(sat);
+        osm.addTo(map);
+        isSat = false;
+        document.getElementById("toggleLabel").textContent = "SAT";
+        showToast("Zoom máximo de imagen — cambiando a OSM");
+      }
     });
 
-    // ============================================================
-    // 7) Zoom inicial: fit a todas las capas, pero sin perder satélite
-    // ============================================================
-    function fitAll() {
-      const groups = [];
-      if (baseLayer.getBounds && baseLayer.getBounds().isValid()) groups.push(baseLayer.getBounds());
-      if (ventaLayer.getBounds && ventaLayer.getBounds().isValid()) groups.push(ventaLayer.getBounds());
-
-      if (!groups.length) {
-        // fallback: Chile centro aprox
-        map.setView([-33.45, -70.65], 12);
-        showToast("Pega tus GeoJSON en el index.html (loteoBase / lotesVenta).");
+    document.getElementById("btnToggle").onclick = function(){
+      if (isSat){
+        map.removeLayer(sat);
+        osm.addTo(map);
+        isSat = false;
+        document.getElementById("toggleLabel").textContent = "SAT";
         return;
       }
+      if (map.getZoom() > SAT_MAX_VISUAL_ZOOM) map.setZoom(SAT_MAX_VISUAL_ZOOM);
+      map.removeLayer(osm);
+      sat.addTo(map);
+      isSat = true;
+      document.getElementById("toggleLabel").textContent = "OSM";
+    };
 
-      // unión de bounds
-      let b = groups[0];
-      for (let i=1;i<groups.length;i++) b = b.extend(groups[i]);
+    /* =========================
+       INIT
+       ========================= */
+    document.getElementById("countNum").textContent = (LOTES.features || []).length;
 
-      map.fitBounds(b, { padding:[35,35] });
-
-      // Ajuste para mantener satélite "nítido": preferimos >=14 si es posible
-      const z = map.getZoom();
-      if (z > 16) map.setZoom(16);
-      if (z < 14) map.setZoom(14);
-    }
-
-    // Espera un tick para que renderer exista
-    setTimeout(() => {
-      fitAll();
-      // hatch init
-      ventaLayer.eachLayer(l => applyHatchToLayer(l));
-    }, 60);
+    map.whenReady(() => {
+      fitView();
+      // doble-fit por seguridad (cuando el layout termina)
+      setTimeout(() => { map.invalidateSize(); fitView(); }, 60);
+    });
+    window.addEventListener("load", () => {
+      map.invalidateSize();
+      fitView();
+    });
   </script>
 </body>
 </html>

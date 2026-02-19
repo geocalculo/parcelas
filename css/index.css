@@ -334,3 +334,15 @@ hr{
   }
 }
 
+/* ============================================================
+   Override: Botón Consultar (WhatsApp) — Opción A
+   (para el panel "glass" del index.html)
+   ============================================================ */
+.cta-btn.cta-primary{
+  background: #25D366 !important;
+  color:#0b1a10 !important;
+  box-shadow: 0 10px 18px rgba(37,211,102,0.22) !important;
+}
+.cta-btn.cta-primary:hover{
+  background:#1fbe5a !important;
+}
