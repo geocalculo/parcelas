@@ -7,7 +7,7 @@
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,400;0,500;1,300&display=swap" rel="stylesheet">
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -17,7 +17,6 @@
   <link rel="stylesheet" href="css/index.css"/>
 
   <style>
-    /* Layout mínimo (el panel se diseña en index.css) */
     *{ box-sizing:border-box; }
     html, body{ height:100%; margin:0; }
     body{
@@ -25,13 +24,8 @@
       background:#0b0f14;
       overflow:hidden;
     }
+    #map{ position:fixed; inset:0; }
 
-    #map{
-      position:fixed;
-      inset:0;
-    }
-
-    /* Topbar flotante */
     .topbar{
       position: absolute;
       top: 10px; left: 10px; right: 10px;
@@ -48,7 +42,6 @@
       -webkit-backdrop-filter: blur(10px);
       color: rgba(255,255,255,0.92);
     }
-
     .brand{
       display:flex;
       align-items:center;
@@ -103,7 +96,6 @@
     .tbtn:hover{ background: rgba(255,255,255,0.14); }
     .tbtn svg{ width:14px; height:14px; opacity:.9; }
 
-    /* Leyenda */
     .legend{
       position:absolute;
       left: 12px;
@@ -139,19 +131,17 @@
     }
     .dot.base{ border: 2px solid rgba(255,80,80,0.85); background: transparent; }
 
-    /* ✅ Panel flotante (usa index.css para el estilo interno) */
     #infoPanel{
       position:absolute;
       right: 12px;
-      top: 76px;           /* bajo la topbar */
+      top: 76px;
       z-index: 1400;
       width: 360px;
       max-width: calc(100vw - 24px);
-      display:none;        /* se abre al click */
+      display:none;
     }
     #infoPanel.open{ display:block; }
 
-    /* Botón cerrar dentro del header (mínimo, mantiene estética de index.css) */
     .info-close{
       position:absolute;
       right: 10px;
@@ -167,7 +157,6 @@
     }
     .info-close:hover{ filter: brightness(0.98); }
 
-    /* Mobile: panel como sheet */
     @media (max-width: 720px){
       #infoPanel{
         left: 10px;
@@ -178,7 +167,6 @@
       }
     }
 
-    /* Toast */
     #toast{
       position: fixed;
       top: 14px;
@@ -197,6 +185,33 @@
       max-width: 360px;
     }
     #toast.show{ opacity:1; transform: translateY(0); }
+
+    /* Loading overlay (evita “gris”) */
+    #loadingOverlay{
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background: #0b0f14;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: rgba(255,255,255,0.85);
+      font-weight: 700;
+      font-size: 14px;
+      transition: opacity .35s ease;
+    }
+    #loadingOverlay.hidden{ opacity: 0; pointer-events: none; }
+    .spinner{
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: rgba(255,255,255,0.75);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+    .leaflet-container{ background:#0b0f14; }
   </style>
 
   <script>
@@ -212,6 +227,12 @@
 
 <body>
   <div id="map"></div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div>Cargando mapa…</div>
+  </div>
 
   <div class="topbar">
     <div class="brand">
@@ -234,7 +255,6 @@
         Vista
       </button>
 
-      <!-- Toggle manual: si el usuario elige OSM, queda fijo hasta volver a SAT -->
       <button class="tbtn" id="btnToggle" title="Cambiar mapa base">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
           <circle cx="8" cy="8" r="6.5"/>
@@ -255,7 +275,6 @@
     <div class="legRow"><span class="dot base"></span> Loteo base</div>
   </div>
 
-  <!-- ✅ Ventana flotante (usa index.css) -->
   <aside id="infoPanel" class="info-panel" aria-live="polite">
     <div class="info-header" style="position:relative;">
       <div class="info-title">Información del lote</div>
@@ -281,11 +300,26 @@
 
   <script>
     /* =========================
-       ✅ CARGA DESDE /capas/
+       Config
        ========================= */
-
     const PATH_VENTA = "capas/lotes_en_venta.geojson";
     const PATH_BASE  = "capas/loteo_base.geojson";
+    const SAT_MAX_VISUAL_ZOOM = 16;   // regla: >16 => OSM (si modo auto)
+    const WA_NUMBER = "56985962740";
+
+    function showLoading(msg){
+      const o = document.getElementById("loadingOverlay");
+      if (!o) return;
+      const txt = o.querySelector("div:last-child");
+      if (txt && msg) txt.textContent = msg;
+      o.classList.remove("hidden");
+    }
+    function hideLoading(){
+      const o = document.getElementById("loadingOverlay");
+      if (!o) return;
+      o.classList.add("hidden");
+      setTimeout(()=> o.remove(), 400);
+    }
 
     async function loadGeoJSON(url){
       const r = await fetch(url, { cache: "no-store" });
@@ -296,9 +330,8 @@
     }
 
     /* =========================
-       MAP INIT (zoom libre)
+       Map init
        ========================= */
-    const SAT_MAX_VISUAL_ZOOM = 16;   // <- regla que pediste
     const map = L.map("map", { zoomControl: true, maxZoom: 19 });
     map.zoomControl.setPosition("bottomright");
 
@@ -312,15 +345,12 @@
       { maxZoom: 19, attribution: "© OpenStreetMap" }
     );
 
-    // Estado del basemap:
-    // - auto: SAT por defecto, si zoom > 16 => OSM, si vuelve <=16 => SAT
-    // - osmLocked: usuario eligió OSM y se mantiene
-    let baseMode = "auto"; // "auto" | "osmLocked"
-    let currentBase = "sat"; // "sat" | "osm"
+    // basemap state
+    let baseMode = "auto";    // "auto" | "osmLocked"
+    let currentBase = "sat";  // "sat" | "osm"
 
     function setBase(next){
       if (next === currentBase) return;
-
       if (next === "sat"){
         if (map.hasLayer(osm)) map.removeLayer(osm);
         if (!map.hasLayer(sat)) sat.addTo(map);
@@ -336,30 +366,25 @@
 
     function applyAutoBase(){
       if (baseMode !== "auto") return;
-      const z = map.getZoom();
-      if (z > SAT_MAX_VISUAL_ZOOM) setBase("osm");
-      else setBase("sat");
+      setBase(map.getZoom() > SAT_MAX_VISUAL_ZOOM ? "osm" : "sat");
     }
 
     map.on("zoomend", applyAutoBase);
 
     document.getElementById("btnToggle").onclick = () => {
-      // Si estamos en auto y usuario pide OSM => lock
       if (baseMode === "auto"){
         baseMode = "osmLocked";
         setBase("osm");
         showToast("OSM seleccionado (fijo)");
         return;
       }
-
-      // Si estaba fijo en OSM => volver a modo auto (y aplicar regla por zoom)
       baseMode = "auto";
       applyAutoBase();
       showToast("Modo automático (SAT/OSM por zoom)");
     };
 
     /* =========================
-       STYLES
+       Styles
        ========================= */
     const buckets = { 25: "#5E9ED6", 30: "#2DA882", 40: "#D4882A" };
     function parseMM(v){
@@ -378,10 +403,8 @@
     }
 
     /* =========================
-       INFO PANEL (index.css)
+       Info panel
        ========================= */
-    const WA_NUMBER = "56985962740"; // <- tu número (sin +)
-
     function openInfo(feature, layer){
       const p = feature.properties || {};
       const mm = parseMM(p.Valor);
@@ -390,16 +413,12 @@
       const panel = document.getElementById("infoPanel");
       panel.classList.add("open");
 
-      // Header panel
       document.querySelector("#infoPanel .info-title").textContent = p.Name || p.id || "Lote";
       document.querySelector("#infoPanel .info-subtitle").textContent =
         (p.id ? p.id + " · " : "") + (precio || "");
 
-      // Actions
-      const actions = document.getElementById("infoActions");
-      actions.style.display = "flex";
+      document.getElementById("infoActions").style.display = "flex";
 
-      // Tabla
       const rows = [];
       const push = (k,v) => {
         if (v === undefined || v === null || String(v).trim()==="") return;
@@ -412,28 +431,23 @@
       for (const k in p){
         if (k === "id" || k === "Name" || k === "Valor") continue;
         const val = p[k];
-        if (val && typeof val === "object") continue; // evita [object Object]
+        if (val && typeof val === "object") continue;
         push(k, val);
       }
 
-      document.getElementById("infoTable").innerHTML = `
-        <table>${rows.join("") || `<tr><th>Info</th><td>Sin datos</td></tr>`}</table>
-      `;
+      document.getElementById("infoTable").innerHTML =
+        `<table>${rows.join("") || `<tr><th>Info</th><td>Sin datos</td></tr>`}</table>`;
 
-      // WhatsApp
       const msg = encodeURIComponent(`Hola, me interesa el ${p.Name || "lote"} (${p.id || ""}) — Valor: ${p.Valor || ""}`);
       document.getElementById("btn-wa").href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
 
-      // Zoom (libre; si pasa 16 en auto => se cambia solo a OSM)
       document.getElementById("btn-zoom").onclick = () => {
         map.fitBounds(layer.getBounds().pad(0.3));
       };
     }
 
     function closeInfo(){
-      const panel = document.getElementById("infoPanel");
-      panel.classList.remove("open");
-
+      document.getElementById("infoPanel").classList.remove("open");
       if (window._selectedLayer){
         window._ventaLayer.resetStyle(window._selectedLayer);
         window._selectedLayer = null;
@@ -444,20 +458,23 @@
       e.stopPropagation();
       closeInfo();
     };
-
     map.on("click", closeInfo);
 
     /* =========================
-       INIT: cargar capas y dibujar
+       Init async: load layers then auto-fit
        ========================= */
     (async function init(){
       try{
+        showLoading("Cargando capas…");
+
+        // ✅ arranque satélite siempre
+        setBase("sat");
+
         const [LOTES, BASE] = await Promise.all([
           loadGeoJSON(PATH_VENTA),
           loadGeoJSON(PATH_BASE),
         ]);
 
-        // Contador
         document.getElementById("countNum").textContent = (LOTES.features || []).length;
 
         const baseLayer = L.geoJSON(BASE, {
@@ -492,7 +509,6 @@
         window._ventaLayer = ventaLayer;
 
         const group = L.featureGroup([baseLayer, ventaLayer]);
-        window._group = group;
 
         function fitView(){
           const b = group.getBounds();
@@ -501,27 +517,42 @@
             return;
           }
           map.fitBounds(b.pad(0.12));
+        }
+
+        // ✅ MISMA lógica para botón y para auto-arranque
+        function doFit(){
+          map.invalidateSize(true);
+          fitView();
           applyAutoBase();
         }
 
-        document.getElementById("btnFit").onclick = () => {
-          map.invalidateSize();
-          fitView();
+        document.getElementById("btnFit").onclick = doFit;
+
+        // ✅ auto-fit “como si apretaras Vista”, pero sin que el usuario lo note
+        // (espera un poco para asegurar layout y panes listos)
+        setTimeout(doFit, 80);
+
+        // ✅ ocultar overlay cuando el satélite termine de cargar tiles
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          hideLoading();
+          setTimeout(() => map.invalidateSize(), 60);
         };
+        sat.once("load", finish);
+        setTimeout(finish, 3500);
 
-        map.whenReady(() => {
-          fitView();
-          setTimeout(() => { map.invalidateSize(); }, 60);
-        });
-
-        window.addEventListener("load", () => {
-          map.invalidateSize();
-          fitView();
+        sat.on("tileerror", () => {
+          showToast("SAT no cargó (red). Cambiando a OSM…");
+          setBase("osm");
+          finish();
         });
 
       } catch (err){
         console.error(err);
         showToast("Error cargando capas. Revisa consola (F12).");
+        hideLoading();
       }
     })();
   </script>
