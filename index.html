@@ -13,49 +13,29 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ✅ UX panel / tabla / badges -->
+  <!-- ✅ Panel / tabla / badges (TU CSS) -->
   <link rel="stylesheet" href="css/index.css"/>
 
   <style>
-    /* Solo layout + controles (el panel usa index.css) */
-    :root{
-      --gap: 14px;
-      --headerH: 58px;
-      --sideW: 380px;
-    }
+    /* Layout mínimo (el panel se diseña en index.css) */
     *{ box-sizing:border-box; }
     html, body{ height:100%; margin:0; }
     body{
       font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background:#0b0f14;
-    }
-
-    .app{
-      height:100%;
-      display:grid;
-      grid-template-columns: 1fr var(--sideW);
-      gap: var(--gap);
-      padding: var(--gap);
-    }
-
-    .mapWrap{
-      position:relative;
-      border-radius: 16px;
       overflow:hidden;
-      border: 1px solid rgba(255,255,255,0.10);
-      box-shadow: 0 18px 44px rgba(0,0,0,.35);
-      min-height: 520px;
     }
 
-    #map{ height:100%; width:100%; }
+    #map{
+      position:fixed;
+      inset:0;
+    }
 
-    /* Header flotante simple */
+    /* Topbar flotante */
     .topbar{
-      position:absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
-      z-index: 1100;
+      position: absolute;
+      top: 10px; left: 10px; right: 10px;
+      z-index: 1200;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -106,8 +86,6 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-
-    /* Botones compactos para topbar */
     .tbtn{
       display:inline-flex;
       align-items:center;
@@ -130,7 +108,7 @@
       position:absolute;
       left: 12px;
       bottom: 12px;
-      z-index: 1100;
+      z-index: 1200;
       background: rgba(0,0,0,0.45);
       border: 1px solid rgba(255,255,255,0.12);
       color: rgba(255,255,255,0.92);
@@ -161,35 +139,43 @@
     }
     .dot.base{ border: 2px solid rgba(255,80,80,0.85); background: transparent; }
 
-    /* Columna derecha */
-    .side{
-      display:flex;
-      flex-direction:column;
-      gap: var(--gap);
-      min-width: 320px;
+    /* ✅ Panel flotante (usa index.css para el estilo interno) */
+    #infoPanel{
+      position:absolute;
+      right: 12px;
+      top: 76px;           /* bajo la topbar */
+      z-index: 1400;
+      width: 360px;
+      max-width: calc(100vw - 24px);
+      display:none;        /* se abre al click */
     }
+    #infoPanel.open{ display:block; }
 
-    /* Responsive: móvil = mapa full y panel abajo (sheet simple) */
-    @media (max-width: 980px){
-      .app{ grid-template-columns: 1fr; padding:0; gap:0; }
-      .mapWrap{ border-radius:0; border:none; box-shadow:none; height:100vh; min-height:100vh; }
-      .side{
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        z-index: 2000;
-        padding: 10px;
-        pointer-events:none;
-      }
+    /* Botón cerrar dentro del header (mínimo, mantiene estética de index.css) */
+    .info-close{
+      position:absolute;
+      right: 10px;
+      top: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: rgba(255,255,255,0.65);
+      cursor:pointer;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .info-close:hover{ filter: brightness(0.98); }
+
+    /* Mobile: panel como sheet */
+    @media (max-width: 720px){
       #infoPanel{
-        pointer-events:auto;
-        max-height: 62vh;
-        transform: translateY(calc(100% + 16px));
-        transition: transform .22s ease;
+        left: 10px;
+        right: 10px;
+        top: auto;
+        bottom: 10px;
+        width: auto;
       }
-      #infoPanel.open{
-        transform: translateY(0);
-      }
-      .topbar{ left:10px; right:10px; }
     }
 
     /* Toast */
@@ -216,6 +202,7 @@
   <script>
     function showToast(msg) {
       const t = document.getElementById('toast');
+      if (!t) return;
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 2200);
@@ -224,95 +211,100 @@
 </head>
 
 <body>
-  <div id="toast"></div>
+  <div id="map"></div>
 
-  <div class="app">
-    <div class="mapWrap">
-      <div class="topbar">
-        <div class="brand">
-          <div class="brandMark">⛰</div>
-          <div class="brandTxt">
-            <div class="t1">Loteo del Valle</div>
-            <div class="t2">Atacama · Chile</div>
-          </div>
-        </div>
-
-        <div class="actions">
-          <div style="font-size:12px;opacity:.85;font-weight:700">
-            <span id="countNum">—</span> lotes disponibles
-          </div>
-
-          <button class="tbtn" id="btnFit" title="Ajustar vista">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/>
-            </svg>
-            Vista
-          </button>
-
-          <button class="tbtn" id="btnToggle" title="Cambiar mapa base">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="8" cy="8" r="6.5"/>
-              <path d="M8 1.5C8 1.5 11 5 11 8s-3 6.5-3 6.5"/>
-              <path d="M8 1.5C8 1.5 5 5 5 8s3 6.5 3 6.5"/>
-              <path d="M1.5 8h13"/>
-            </svg>
-            <span id="toggleLabel">OSM</span>
-          </button>
-        </div>
-      </div>
-
-      <div id="map"></div>
-
-      <div class="legend">
-        <h4>Referencias</h4>
-        <div class="legRow"><span class="dot" style="background: var(--c25, #5E9ED6)"></span> En venta — MM$ 25</div>
-        <div class="legRow"><span class="dot" style="background: var(--c30, #2DA882)"></span> En venta — MM$ 30</div>
-        <div class="legRow"><span class="dot" style="background: var(--c40, #D4882A)"></span> En venta — MM$ 40</div>
-        <div class="legRow"><span class="dot base"></span> Loteo base</div>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brandMark">⛰</div>
+      <div class="brandTxt">
+        <div class="t1">Loteo del Valle</div>
+        <div class="t2">Atacama · Chile</div>
       </div>
     </div>
 
-    <!-- ✅ Panel usando index.css -->
-    <div class="side">
-      <aside id="infoPanel" class="info-panel">
-        <div class="info-header">
-          <div class="info-title">Información del lote</div>
-          <div class="info-subtitle">Haz clic en un polígono del mapa</div>
-        </div>
+    <div class="actions">
+      <div style="font-size:12px;opacity:.85;font-weight:700">
+        <span id="countNum">—</span> lotes disponibles
+      </div>
 
-        <div class="info-body">
-          <div id="infoActions" style="display:none; margin-bottom: 10px; gap:8px;">
-            <a id="btn-wa" class="btn btn-primary" href="#" target="_blank" rel="noopener">Consultar</a>
-            <button id="btn-zoom" class="btn" type="button">Zoom</button>
-          </div>
+      <button class="tbtn" id="btnFit" title="Ajustar vista">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M1 5V2h3M12 2h3v3M15 11v3h-3M4 14H1v-3"/>
+        </svg>
+        Vista
+      </button>
 
-          <div id="infoTable">
-            <div style="color: var(--muted); font-weight: 700; font-size: 13px;">
-              Selecciona un lote para ver su ficha.
-            </div>
-          </div>
-        </div>
-      </aside>
+      <!-- Toggle manual: si el usuario elige OSM, queda fijo hasta volver a SAT -->
+      <button class="tbtn" id="btnToggle" title="Cambiar mapa base">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="8" cy="8" r="6.5"/>
+          <path d="M8 1.5C8 1.5 11 5 11 8s-3 6.5-3 6.5"/>
+          <path d="M8 1.5C8 1.5 5 5 5 8s3 6.5 3 6.5"/>
+          <path d="M1.5 8h13"/>
+        </svg>
+        <span id="toggleLabel">OSM</span>
+      </button>
     </div>
   </div>
 
+  <div class="legend">
+    <h4>Referencias</h4>
+    <div class="legRow"><span class="dot" style="background:#5E9ED6"></span> En venta — MM$ 25</div>
+    <div class="legRow"><span class="dot" style="background:#2DA882"></span> En venta — MM$ 30</div>
+    <div class="legRow"><span class="dot" style="background:#D4882A"></span> En venta — MM$ 40</div>
+    <div class="legRow"><span class="dot base"></span> Loteo base</div>
+  </div>
+
+  <!-- ✅ Ventana flotante (usa index.css) -->
+  <aside id="infoPanel" class="info-panel" aria-live="polite">
+    <div class="info-header" style="position:relative;">
+      <div class="info-title">Información del lote</div>
+      <div class="info-subtitle">Haz clic en un polígono del mapa</div>
+      <button class="info-close" id="btnCloseInfo" title="Cerrar">×</button>
+    </div>
+
+    <div class="info-body">
+      <div id="infoActions" style="display:none; margin-bottom: 10px; gap:8px;">
+        <a id="btn-wa" class="btn btn-primary" href="#" target="_blank" rel="noopener">Consultar</a>
+        <button id="btn-zoom" class="btn" type="button">Zoom</button>
+      </div>
+
+      <div id="infoTable">
+        <div style="color: var(--muted); font-weight: 700; font-size: 13px;">
+          Selecciona un lote para ver su ficha.
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="toast"></div>
+
   <script>
     /* =========================
-       DATA (PEGAR / MANTENER)
+       ✅ CARGA DESDE /capas/
        ========================= */
-    const LOTES = {"type":"FeatureCollection","name":"lotes_en_venta","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{"id":"loteo_02.5","Name":"Lote 16I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52161584242097,-27.326792353683146,0.0],[-70.52109446342098,-27.326806357683147,0.0],[-70.52114172642098,-27.327706350683147,0.0],[-70.52163208742107,-27.327695757683248,0.0],[-70.52161584242097,-27.326792353683146,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.10","Name":"Lote 21I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51966037542107,-27.327446139683147,0.0],[-70.51930372042098,-27.327121472683146,0.0],[-70.51862709542107,-27.327219474683147,0.0],[-70.51866029642098,-27.327309946683247,0.0],[-70.51873374642098,-27.327449512683145,0.0],[-70.51882531442098,-27.327554963683145,0.0],[-70.51899569742098,-27.327720145683145,0.0],[-70.51911900042097,-27.327810075683146,0.0],[-70.51925280642098,-27.327897513683148,0.0],[-70.51966037542107,-27.327446139683147,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.11","Name":"Lote 22I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51933671142108,-27.326562208683146,0.0],[-70.51852211042097,-27.326586541683145,0.0],[-70.51852281342097,-27.326729051683145,0.0],[-70.51854531542098,-27.326864442683146,0.0],[-70.51856855642107,-27.326994105683145,0.0],[-70.51859901142097,-27.327127950683145,0.0],[-70.51862732842098,-27.327219332683146,0.0],[-70.51930372042098,-27.327121472683146,0.0],[-70.51933671142108,-27.326562208683146,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.12","Name":"Lote 23I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51936792942098,-27.326030953683148,0.0],[-70.51846048742098,-27.326058180683248,0.0],[-70.51852211042097,-27.326586541683145,0.0],[-70.51933671142108,-27.326562208683146,0.0],[-70.51936792942098,-27.326030953683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.13","Name":"Lote 24I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.51939598542097,-27.325558985683145,0.0],[-70.51835057642097,-27.325580300683246,0.0],[-70.51839488042097,-27.325677282683145,0.0],[-70.51842954542097,-27.325802967683146,0.0],[-70.51846043442097,-27.326058141683145,0.0],[-70.51936792942098,-27.326030953683148,0.0],[-70.51939598542097,-27.325558985683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.14","Name":"Lote 25I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.51940828842098,-27.325350124683247,0.0],[-70.51894965042098,-27.324790935683147,0.0],[-70.51835057642097,-27.325580300683246,0.0],[-70.51939598542097,-27.325558985683145,0.0],[-70.51940828842098,-27.325350124683247,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.17","Name":"Lote 28I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52099435242107,-27.326259813683148,0.0],[-70.52013374642108,-27.326331143683145,0.0],[-70.52025260842098,-27.326684736683145,0.0],[-70.52033578042098,-27.326914347683147,0.0],[-70.52102477042098,-27.326831661683148,0.0],[-70.52099435242107,-27.326259813683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.18","Name":"Lote 29I","Valor":"MM$ 40"},"geometry":{"type":"Polygon","coordinates":[[[-70.52102477042098,-27.326831661683148,0.0],[-70.52033578042098,-27.326914347683147,0.0],[-70.52035762142097,-27.326977701683145,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52106561342097,-27.327642159683148,0.0],[-70.52102477042098,-27.326831661683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.19","Name":"Lote 30I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.52106561342097,-27.327642159683148,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52031356442097,-27.327946415683147,0.0],[-70.52098868142097,-27.328560792683145,0.0],[-70.52099873642098,-27.328569747683247,0.0],[-70.52101564242098,-27.328576373683145,0.0],[-70.52102671142097,-27.328580239683248,0.0],[-70.52104331542097,-27.328583352683147,0.0],[-70.52106024042098,-27.328581922683146,0.0],[-70.52107343142097,-27.328577420683146,0.0],[-70.52108942142108,-27.328567675683146,0.0],[-70.52110254642098,-27.328554012683146,0.0],[-70.52111068742097,-27.328540972683147,0.0],[-70.52111375342098,-27.328525229683155,0.0],[-70.52111304842097,-27.328511802683146,0.0],[-70.52106561342097,-27.327642159683148,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.20","Name":"Lote 31I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.52035762142097,-27.326977701683145,0.0],[-70.51967393242097,-27.327366963683147,0.0],[-70.52031356442097,-27.327946415683147,0.0],[-70.52060307142098,-27.327662558683148,0.0],[-70.52035762142097,-27.326977701683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.21","Name":"Lote 32I","Valor":"MM$ 25"},"geometry":{"type":"Polygon","coordinates":[[[-70.52025260842098,-27.326684736683145,0.0],[-70.51943560442098,-27.326087722683145,0.0],[-70.51939782242097,-27.326729318683146,0.0],[-70.51967393242097,-27.327366963683147,0.0],[-70.52035762142097,-27.326977701683145,0.0],[-70.52025260842098,-27.326684736683145,0.0]]]}},{"type":"Feature","properties":{"id":"loteo_02.22","Name":"Lote 33I","Valor":"MM$ 30"},"geometry":{"type":"Polygon","coordinates":[[[-70.52005514042098,-27.326089484683248,0.0],[-70.51943560442098,-27.326087722683145,0.0],[-70.51939782242097,-27.326729318683146,0.0],[-70.52025260842098,-27.326684736683145,0.0],[-70.52005514042098,-27.326089484683248,0.0]]]}}]};
 
-    const BASE = {"type":"FeatureCollection","name":"loteo_base","crs":{"type":"name","properties":{"name":"urn:ogc:def:crs:OGC:1.3:CRS84"}},"features":[{"type":"Feature","properties":{},"geometry":{"type":"MultiPolygon","coordinates":[[[[-70.52445433617412,-27.318817644288156,0.0],[-70.52381075937411,-27.318643967888157,0.0],[-70.52341043907411,-27.319169124488155,0.0],[-70.52394062687411,-27.319491554788154,0.0],[-70.52445433617412,-27.318817644288156,0.0]]]]}},{"type":"Feature","properties":{},"geometry":{"type":"MultiPolygon","coordinates":[[[[-70.52393881097412,-27.319490327488158,0.0],[-70.52340841437412,-27.319167770188155,0.0],[-70.5229493360741,-27.319770000788157,0.0],[-70.5234730614741,-27.320088501688147,0.0],[-70.52393881097412,-27.319490327488158,0.0]]]]}}]};
+    const PATH_VENTA = "capas/lotes_en_venta.geojson";
+    const PATH_BASE  = "capas/loteo_base.geojson";
+
+    async function loadGeoJSON(url){
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      const j = await r.json();
+      if (!j || !j.type) throw new Error(`${url}: JSON inválido`);
+      return j;
+    }
 
     /* =========================
-       MAP INIT
+       MAP INIT (zoom libre)
        ========================= */
-    const map = L.map("map", { zoomControl: true, maxZoom: 16 });
+    const SAT_MAX_VISUAL_ZOOM = 16;   // <- regla que pediste
+    const map = L.map("map", { zoomControl: true, maxZoom: 19 });
     map.zoomControl.setPosition("bottomright");
 
     const sat = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 16, attribution: "© Esri" }
+      { maxZoom: 19, attribution: "© Esri" }
     ).addTo(map);
 
     const osm = L.tileLayer(
@@ -320,18 +312,60 @@
       { maxZoom: 19, attribution: "© OpenStreetMap" }
     );
 
-    let isSat = true;
+    // Estado del basemap:
+    // - auto: SAT por defecto, si zoom > 16 => OSM, si vuelve <=16 => SAT
+    // - osmLocked: usuario eligió OSM y se mantiene
+    let baseMode = "auto"; // "auto" | "osmLocked"
+    let currentBase = "sat"; // "sat" | "osm"
+
+    function setBase(next){
+      if (next === currentBase) return;
+
+      if (next === "sat"){
+        if (map.hasLayer(osm)) map.removeLayer(osm);
+        if (!map.hasLayer(sat)) sat.addTo(map);
+        currentBase = "sat";
+        document.getElementById("toggleLabel").textContent = "OSM";
+      } else {
+        if (map.hasLayer(sat)) map.removeLayer(sat);
+        if (!map.hasLayer(osm)) osm.addTo(map);
+        currentBase = "osm";
+        document.getElementById("toggleLabel").textContent = "SAT";
+      }
+    }
+
+    function applyAutoBase(){
+      if (baseMode !== "auto") return;
+      const z = map.getZoom();
+      if (z > SAT_MAX_VISUAL_ZOOM) setBase("osm");
+      else setBase("sat");
+    }
+
+    map.on("zoomend", applyAutoBase);
+
+    document.getElementById("btnToggle").onclick = () => {
+      // Si estamos en auto y usuario pide OSM => lock
+      if (baseMode === "auto"){
+        baseMode = "osmLocked";
+        setBase("osm");
+        showToast("OSM seleccionado (fijo)");
+        return;
+      }
+
+      // Si estaba fijo en OSM => volver a modo auto (y aplicar regla por zoom)
+      baseMode = "auto";
+      applyAutoBase();
+      showToast("Modo automático (SAT/OSM por zoom)");
+    };
 
     /* =========================
        STYLES
        ========================= */
     const buckets = { 25: "#5E9ED6", 30: "#2DA882", 40: "#D4882A" };
-
     function parseMM(v){
       const m = String(v || "").match(/(\d+)/);
       return m ? Number(m[1]) : null;
     }
-
     function styleVenta(f){
       const mm = parseMM(f.properties?.Valor);
       const color = buckets[mm] || "#5E9ED6";
@@ -341,48 +375,6 @@
       const mm = parseMM(f.properties?.Valor);
       const color = buckets[mm] || "#5E9ED6";
       return { color, weight: 3.5, fillColor: color, fillOpacity: 0.62 };
-    }
-
-    const baseLayer = L.geoJSON(BASE, {
-      style: { color: "#ff5050", weight: 2, fillOpacity: 0, opacity: 0.65 },
-      interactive: false
-    }).addTo(map);
-
-    let selectedLayer = null;
-
-    const ventaLayer = L.geoJSON(LOTES, {
-      style: styleVenta,
-      onEachFeature: (f, l) => {
-        l.on("click", (e) => {
-          L.DomEvent.stopPropagation(e);
-
-          if (selectedLayer && selectedLayer !== l) {
-            ventaLayer.resetStyle(selectedLayer);
-          }
-          selectedLayer = l;
-          l.setStyle(styleVentaSelected(f));
-
-          openInfo(f, l);
-        });
-
-        l.on("mouseover", function(){
-          if (this !== selectedLayer) this.setStyle({ fillOpacity: 0.55, weight: 3 });
-        });
-        l.on("mouseout", function(){
-          if (this !== selectedLayer) ventaLayer.resetStyle(this);
-        });
-      }
-    }).addTo(map);
-
-    const group = L.featureGroup([baseLayer, ventaLayer]);
-
-    function fitView(){
-      const b = group.getBounds();
-      if (!b || !b.isValid()){
-        showToast("No hay bounds válidos (revisa GeoJSON).");
-        return;
-      }
-      map.fitBounds(b.pad(0.12), { maxZoom: 16 });
     }
 
     /* =========================
@@ -395,12 +387,13 @@
       const mm = parseMM(p.Valor);
       const precio = p.Valor || (mm ? `MM$ ${mm}` : "—");
 
-      // Header panel
-      const titleEl = document.querySelector("#infoPanel .info-title");
-      const subEl   = document.querySelector("#infoPanel .info-subtitle");
+      const panel = document.getElementById("infoPanel");
+      panel.classList.add("open");
 
-      titleEl.textContent = p.Name || p.id || "Lote";
-      subEl.textContent   = (p.id ? p.id + " · " : "") + (precio || "");
+      // Header panel
+      document.querySelector("#infoPanel .info-title").textContent = p.Name || p.id || "Lote";
+      document.querySelector("#infoPanel .info-subtitle").textContent =
+        (p.id ? p.id + " · " : "") + (precio || "");
 
       // Actions
       const actions = document.getElementById("infoActions");
@@ -410,7 +403,7 @@
       const rows = [];
       const push = (k,v) => {
         if (v === undefined || v === null || String(v).trim()==="") return;
-        rows.push(`<tr><th>${k}</th><td>${v}</td></tr>`);
+        rows.push(`<tr><th>${k}</th><td>${String(v)}</td></tr>`);
       };
 
       push("Referencia", p.id || "");
@@ -418,7 +411,9 @@
       push("Precio", p.Valor || "");
       for (const k in p){
         if (k === "id" || k === "Name" || k === "Valor") continue;
-        push(k, p[k]);
+        const val = p[k];
+        if (val && typeof val === "object") continue; // evita [object Object]
+        push(k, val);
       }
 
       document.getElementById("infoTable").innerHTML = `
@@ -429,76 +424,106 @@
       const msg = encodeURIComponent(`Hola, me interesa el ${p.Name || "lote"} (${p.id || ""}) — Valor: ${p.Valor || ""}`);
       document.getElementById("btn-wa").href = `https://wa.me/${WA_NUMBER}?text=${msg}`;
 
-      // Zoom
+      // Zoom (libre; si pasa 16 en auto => se cambia solo a OSM)
       document.getElementById("btn-zoom").onclick = () => {
-        map.fitBounds(layer.getBounds().pad(0.3), { maxZoom: 16 });
+        map.fitBounds(layer.getBounds().pad(0.3));
       };
-
-      // Mobile: abrir panel como sheet
-      if (window.matchMedia("(max-width: 980px)").matches){
-        document.getElementById("infoPanel").classList.add("open");
-      }
     }
 
     function closeInfo(){
       const panel = document.getElementById("infoPanel");
       panel.classList.remove("open");
-      if (selectedLayer){
-        ventaLayer.resetStyle(selectedLayer);
-        selectedLayer = null;
+
+      if (window._selectedLayer){
+        window._ventaLayer.resetStyle(window._selectedLayer);
+        window._selectedLayer = null;
       }
     }
+
+    document.getElementById("btnCloseInfo").onclick = (e) => {
+      e.stopPropagation();
+      closeInfo();
+    };
 
     map.on("click", closeInfo);
 
     /* =========================
-       BUTTONS
+       INIT: cargar capas y dibujar
        ========================= */
-    document.getElementById("btnFit").onclick = () => {
-      map.invalidateSize();
-      fitView();
-    };
+    (async function init(){
+      try{
+        const [LOTES, BASE] = await Promise.all([
+          loadGeoJSON(PATH_VENTA),
+          loadGeoJSON(PATH_BASE),
+        ]);
 
-    const SAT_MAX_VISUAL_ZOOM = 16;
-    map.on("zoomend", () => {
-      if (isSat && map.getZoom() > SAT_MAX_VISUAL_ZOOM){
-        map.removeLayer(sat);
-        osm.addTo(map);
-        isSat = false;
-        document.getElementById("toggleLabel").textContent = "SAT";
-        showToast("Zoom máximo de imagen — cambiando a OSM");
+        // Contador
+        document.getElementById("countNum").textContent = (LOTES.features || []).length;
+
+        const baseLayer = L.geoJSON(BASE, {
+          style: { color: "#ff5050", weight: 2, fillOpacity: 0, opacity: 0.65 },
+          interactive: false
+        }).addTo(map);
+
+        window._selectedLayer = null;
+
+        const ventaLayer = L.geoJSON(LOTES, {
+          style: styleVenta,
+          onEachFeature: (f, l) => {
+            l.on("click", (e) => {
+              L.DomEvent.stopPropagation(e);
+
+              if (window._selectedLayer && window._selectedLayer !== l) ventaLayer.resetStyle(window._selectedLayer);
+              window._selectedLayer = l;
+              l.setStyle(styleVentaSelected(f));
+
+              openInfo(f, l);
+            });
+
+            l.on("mouseover", function(){
+              if (this !== window._selectedLayer) this.setStyle({ fillOpacity: 0.55, weight: 3 });
+            });
+            l.on("mouseout", function(){
+              if (this !== window._selectedLayer) ventaLayer.resetStyle(this);
+            });
+          }
+        }).addTo(map);
+
+        window._ventaLayer = ventaLayer;
+
+        const group = L.featureGroup([baseLayer, ventaLayer]);
+        window._group = group;
+
+        function fitView(){
+          const b = group.getBounds();
+          if (!b || !b.isValid()){
+            showToast("No hay bounds válidos (revisa GeoJSON).");
+            return;
+          }
+          map.fitBounds(b.pad(0.12));
+          applyAutoBase();
+        }
+
+        document.getElementById("btnFit").onclick = () => {
+          map.invalidateSize();
+          fitView();
+        };
+
+        map.whenReady(() => {
+          fitView();
+          setTimeout(() => { map.invalidateSize(); }, 60);
+        });
+
+        window.addEventListener("load", () => {
+          map.invalidateSize();
+          fitView();
+        });
+
+      } catch (err){
+        console.error(err);
+        showToast("Error cargando capas. Revisa consola (F12).");
       }
-    });
-
-    document.getElementById("btnToggle").onclick = function(){
-      if (isSat){
-        map.removeLayer(sat);
-        osm.addTo(map);
-        isSat = false;
-        document.getElementById("toggleLabel").textContent = "SAT";
-        return;
-      }
-      if (map.getZoom() > SAT_MAX_VISUAL_ZOOM) map.setZoom(SAT_MAX_VISUAL_ZOOM);
-      map.removeLayer(osm);
-      sat.addTo(map);
-      isSat = true;
-      document.getElementById("toggleLabel").textContent = "OSM";
-    };
-
-    /* =========================
-       INIT
-       ========================= */
-    document.getElementById("countNum").textContent = (LOTES.features || []).length;
-
-    map.whenReady(() => {
-      fitView();
-      // doble-fit por seguridad (cuando el layout termina)
-      setTimeout(() => { map.invalidateSize(); fitView(); }, 60);
-    });
-    window.addEventListener("load", () => {
-      map.invalidateSize();
-      fitView();
-    });
+    })();
   </script>
 </body>
 </html>
